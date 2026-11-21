@@ -43,7 +43,12 @@ set -e
 # 그래도 리뷰어는 계속 지정한다 — 지정 시점에 Slack "리뷰 요청" 알림이
 # 나가고, 그것이 "이런 것이 들어갔다"를 알리는 유일한 실시간 통로다.
 # --no-reviewer 로 끄면 아무도 모르게 지나간다.
-DEFAULT_REVIEWER="jerryko570"
+#
+# 2026-11-21 새 저장소에서는 **비워둔다.** 홍설아 혼자 먼저 진행하기로 했고,
+# 협업자가 아닌 사람을 리뷰어로 넣으면 gh 가 PR 생성 자체를 실패시킨다.
+# PR 을 만든 사람은 자기 자신을 리뷰어로 지정할 수 없다. 협업자가 생기면
+# 그 사람의 GitHub 아이디를 여기 적는다.
+DEFAULT_REVIEWER=""
 
 TYPE=$1
 TITLE=$2
@@ -205,6 +210,9 @@ fi
 GH_LABEL="${EMOJI}${LABEL}"
 
 ARGS=(--title "${PR_TITLE}" --body "${PR_BODY}" --assignee "@me" --label "${GH_LABEL}")
+if [ -z "$DEFAULT_REVIEWER" ]; then
+  ASSIGN_REVIEWER=false
+fi
 if [ "$ASSIGN_REVIEWER" = "true" ]; then
   ARGS+=(--reviewer "${DEFAULT_REVIEWER}")
 fi
