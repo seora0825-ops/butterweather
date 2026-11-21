@@ -1,0 +1,38 @@
+<!-- 제목은 [<이모지> <라벨>/<번호>][<scope>] 형식입니다.
+     scope: FE/Component FE/Page FE/Style FE/State FE/A11y
+            BE/API BE/Data BE/Auth BE/Payment
+            Infra/Build Infra/CI Infra/Deploy Infra/Repo
+            Design/Brand Design/System Design/Asset Design/Flow
+            Docs/Plan Docs/Dev
+     한 PR은 하나의 scope에. 두 개에 걸치면 대개 PR이 너무 큰 것입니다.
+     ./pr.sh 로 만들면 자동으로 붙습니다. CLAUDE.md 「PR scope prefix」 참조. -->
+
+<!-- 로드맵 위치. 해당 없으면 이 줄을 지우세요. docs/plan/roadmap.md -->
+
+> 🗺️ M0 · I0.1 · E0.1.1
+
+## 📋 작업 내용
+
+<!-- 이 칸은 그대로 Slack #dev-pr 로 나갑니다. 비개발자가 읽습니다.
+     파일 이름이나 용어를 나열하지 말고, 무엇이 달라졌는지 사람 말로 쓰세요.
+
+     개발 요소는 영문으로: header, layout, container, token, component ...
+     component 이름은 첫 글자 대문자로: Header, ProductList (React 문법 제약)
+     검색에 걸려야 하기 때문입니다. CLAUDE.md 「개발 용어는 영문으로」 참조. -->
+
+## 🔧 바꾼 것
+
+<!-- 개발자가 읽는 칸. 파일·기능 단위로 구체적으로.
+     "Files changed"를 열지 않아도 무엇을 했는지 알 수 있게. -->
+
+-
+
+## 👀 봐주세요
+
+<!-- 리뷰어의 판단이 필요한 곳을 짚어주세요.
+     감각으로 갈리는 것, 결정이 필요한 것, 확신이 없는 것.
+     정말 없으면 "특별히 없음"이라고 쓰세요. -->
+
+## 🖼️ 화면
+
+<!-- 스크린샷을 붙이거나, 없으면 "화면 변화 없음". -->
