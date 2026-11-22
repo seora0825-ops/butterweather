@@ -399,17 +399,41 @@ feat: 상품 목록 추가          ← 이모지 없이도 통과
 
 ## 7. 배포 — Vercel
 
-|               |                                                                                                            |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| 프로젝트      | `butterweather` — **2026-11-22 새로 만들었다**                                                             |
-| 계정          | 홍설아 (`seora0825-1454s-projects`, **Pro**) — GitHub 저장소 소유자와 같은 사람이다                        |
-| 사이트        | **https://www.butterweather.com** — `butterweather.com` 은 `www` 로 308 이동                               |
-| 도메인        | `butterweather.com` — Vercel 에서 샀다(2026-11-22, 등록 대행 Name.com). 네임서버도 Vercel. 만료 2027-11-22 |
-| 자동 배포     | `main`에 머지되면 프로덕션 배포                                                                            |
-| **PR 프리뷰** | **PR을 열면 프리뷰 URL이 자동으로 붙는다**                                                                 |
-| 환경변수      | Supabase 셋을 Production·Preview 에 넣었다. 포트원 넷은 **아직 없다**                                      |
+|               |                                                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 프로젝트      | `butterweather` — **2026-11-22 새로 만들었다**                                                                       |
+| 계정          | 홍설아 (`seora0825-1454s-projects`, **Pro**) — GitHub 저장소 소유자와 같은 사람이다                                  |
+| 사이트        | **https://www.butterweather.com** — `butterweather.com` 은 `www` 로 308 이동                                         |
+| 도메인        | `butterweather.com` — Vercel 에서 샀다(2026-11-22, 등록 대행 Name.com). 네임서버도 Vercel. 만료 2027-11-22           |
+| 자동 배포     | `main`에 머지되면 프로덕션 배포                                                                                      |
+| **PR 프리뷰** | **PR을 열면 프리뷰 URL이 자동으로 붙는다**                                                                           |
+| 환경변수      | Supabase 셋 · 포트원 넷을 Production·Preview 에 넣었다(2026-11-22). `RESEND_API_KEY` 는 주문 알림 코드와 함께 넣는다 |
 
 > 이 팀에는 쇼핑몰과 무관한 프로젝트(`minglelab`·`prospect-radar`)가 같이 있다. 건드리지 않는다.
+
+### 포트원 — 테스트 채널이 붙어 있다
+
+|        |                                                                                                                |
+| ------ | -------------------------------------------------------------------------------------------------------------- |
+| 계정   | `butterweather@gmail.com` (2026-11-22 새로 가입)                                                               |
+| 채널   | **테스트** · 토스페이먼츠 「결제창 일반결제」 — 코드가 V2 결제창을 `payMethod: 'CARD'` 로 부르는 방식과 맞는다 |
+| 웹훅   | 테스트 · V2 · `https://www.butterweather.com/api/payments/webhook`                                             |
+| 실연동 | **⬜ 아직.** 토스페이먼츠 계약·심사는 화면(상품·약관·사업자 정보)이 선 뒤 신청한다                             |
+
+> 같은 계정에 KG이니시스 테스트 채널도 있다. **쓰지 않는다** — 옛 사이트 결제창이 느렸던 원인으로 본 쪽이다(roadmap 열린 결정 7). 코드는 `NEXT_PUBLIC_PORTONE_CHANNEL_KEY` 하나만 읽는다.
+>
+> ⚠️ **API Secret 은 V2 탭의 것이다.** 처음에 다른 칸(36자)을 넣어 `401 UNAUTHORIZED` 가 났다. V2 Secret 은 80자다. 넣은 뒤에는 없는 결제번호를 조회해 **`404 PAYMENT_NOT_FOUND`** 가 오면 열쇠가 맞다 — `401` 이면 틀렸다.
+
+### Resend — 주문 메일을 보낼 길이 열려 있다
+
+|      |                                                                                                                                                    |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 발신 | `버터웨더 <noreply@butterweather.com>` · 지역 도쿄(`ap-northeast-1`)                                                                               |
+| DNS  | Resend 가 Vercel DNS 에 직접 넣었다(Domain Connect) — `send`·`rsend` CNAME, `resend._domainkey` TXT. `_dmarc` 는 손으로 넣었다(`v=DMARC1; p=none`) |
+| 확인 | 2026-11-22 시험 메일이 Gmail **받은편지함**에 왔다. SPF·DKIM·DMARC 모두 PASS                                                                       |
+| 키   | `.env.local` 의 `RESEND_API_KEY` 는 **발송 전용**이다 — 도메인 설정은 못 바꾼다. 새도 피해가 작다                                                  |
+
+> **DMARC 는 `p=none` 으로 시작했다.** 주문 메일이 한동안 문제없이 나가면 `p=quarantine` 으로 올린다 — 누가 `butterweather.com` 을 사칭해 보내는 메일을 스팸함으로 보낸다.
 
 **대표 주소는 `www` 다.** Vercel 의 권장값(apex → www)을 따랐다. 그래서 **밖에 등록하는 주소는 전부 `https://www.butterweather.com` 으로 적는다** — 카카오·구글 로그인의 redirect, Supabase Auth 의 Site URL, 포트원 웹훅, 토스 심사의 사이트 주소. apex 를 적으면 308 을 한 번 거치는데, OAuth redirect 처럼 주소를 글자 그대로 비교하는 곳은 그것만으로 실패한다.
 
