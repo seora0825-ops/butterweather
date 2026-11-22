@@ -1,6 +1,6 @@
 # butterweather
 
-이나래의 감각을 파는 브랜드, 버터웨더의 쇼핑몰 🌤️ — `butterweather.com` (준비 중)
+이나래의 감각을 파는 브랜드, 버터웨더의 쇼핑몰 🌤️ — https://www.butterweather.com (화면은 짓는 중)
 
 프로젝트 기준 문서는 [CLAUDE.md](CLAUDE.md)를 본다.
 
