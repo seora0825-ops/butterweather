@@ -89,15 +89,31 @@ export async function createProduct(
   if (error) throw new Error(error.message)
 
   const productId = data.id as string
-  await replaceVariants(productId, variants)
+  try {
+    await insertVariants(
+      productId,
+      variants.map((v, i) => ({ ...v, position: i }))
+    )
+  } catch (e) {
+    // 옵션이 안 들어갔으면 상품도 거둔다. 남겨두면 다시 저장할 때
+    // 「slug 가 이미 있다」로 막힌다
+    await supabase.from('products').delete().eq('id', productId)
+    throw e
+  }
   return productId
 }
 
-/** 수정 */
+/**
+ * 수정.
+ *
+ * `loaded` 는 **폼을 열 때 읽은 옵션**이다(`getProduct().variants`). 무엇이
+ * 지워졌고 무엇이 바뀌었는지를 이것과 비교해 안다.
+ */
 export async function updateProduct(
   id: string,
   input: ProductInput,
-  variants: VariantInput[]
+  variants: VariantInput[],
+  loaded: ProductVariant[]
 ): Promise<void> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -113,42 +129,104 @@ export async function updateProduct(
     throw new Error('저장되지 않았습니다. 관리자로 로그인했는지 확인해 주세요.')
   }
 
-  await replaceVariants(id, variants)
+  await syncVariants(id, variants, loaded)
+}
+
+/** 새 옵션 줄들. position 은 폼에 보이는 순서다 */
+async function insertVariants(
+  productId: string,
+  rows: (VariantInput & { position: number })[]
+): Promise<void> {
+  if (rows.length === 0) return
+  const { error } = await createClient()
+    .from('product_variants')
+    .insert(
+      rows.map((v) => ({
+        product_id: productId,
+        name: v.name,
+        name_en: v.name_en || null,
+        price_krw: v.price_krw,
+        stock: v.stock,
+        position: v.position,
+      }))
+    )
+  if (error) throw new Error(error.message)
 }
 
 /**
- * 옵션을 통째로 갈아 끼운다.
+ * 옵션을 맞춘다. **있던 옵션의 id 를 지킨다 ★**
  *
- * 하나씩 비교해 넣고 고치고 지우는 대신 **지우고 다시 넣는다.** 옵션은
- * 많아야 몇 개고, 순서까지 맞추려면 비교 쪽이 훨씬 복잡해진다.
+ * 처음에는 통째로 지우고 다시 넣었다. 주문이 붙은 뒤로는 그러면 안 된다 —
+ * `order_items.variant_id` 가 `null` 이 되어 **결제 중이던 주문이
+ * `VARIANT_GONE` 으로 취소되고**(`0005`), 손님 장바구니도 끊어진다. 옵션 이름의
+ * 오타 하나만 고쳐도 그렇다. 폼에 없는 값(`price_usd`·`is_active`)도 사라진다.
  *
- * ⚠️ 주문이 붙으면 이 방식을 못 쓴다 — 주문이 variant 를 가리키고 있으면
- * 지우는 순간 끊어진다. M3 에서 다시 판단할 것.
+ * **바뀐 칸만 쓴다 ★** 재고는 결제가 끝날 때마다 DB 가 깎는다. 폼을 열어둔
+ * 사이 팔린 것을 열 때의 숫자로 덮으면 **없는 물건이 되살아난다.** 재고를
+ * 고쳤을 때는 열 때의 값 그대로인지 확인하고 쓴다.
  */
-async function replaceVariants(
+async function syncVariants(
   productId: string,
-  variants: VariantInput[]
+  variants: VariantInput[],
+  loaded: ProductVariant[]
 ): Promise<void> {
   const supabase = createClient()
+  const ordered = variants.map((v, i) => ({ ...v, position: i }))
+  const kept = new Set(ordered.map((v) => v.id).filter(Boolean))
 
-  const { error: delError } = await supabase
-    .from('product_variants')
-    .delete()
-    .eq('product_id', productId)
-  if (delError) throw new Error(delError.message)
+  // 지우는 것이 먼저다. 지운 옵션의 이름을 새 옵션이 쓸 수 있다 —
+  // (product_id, name) 이 unique 다
+  const removed = loaded.filter((v) => !kept.has(v.id)).map((v) => v.id)
+  if (removed.length > 0) {
+    const { data, error } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('product_id', productId)
+      .in('id', removed)
+      .select('id')
+    if (error) throw new Error(error.message)
+    if (!data || data.length !== removed.length) throw new Error(STALE)
+  }
 
-  const rows = variants.map((v, i) => ({
-    product_id: productId,
-    name: v.name,
-    name_en: v.name_en || null,
-    price_krw: v.price_krw,
-    stock: v.stock,
-    position: i,
-  }))
+  for (const v of ordered) {
+    if (!v.id) continue
+    const before = loaded.find((l) => l.id === v.id)
+    if (!before) throw new Error(STALE)
 
-  const { error } = await supabase.from('product_variants').insert(rows)
-  if (error) throw new Error(error.message)
+    const next = {
+      name: v.name,
+      name_en: v.name_en || null,
+      price_krw: v.price_krw,
+      stock: v.stock,
+      position: v.position,
+    }
+    const patch = Object.fromEntries(
+      Object.entries(next).filter(
+        ([k, value]) => before[k as keyof typeof next] !== value
+      )
+    )
+    if (Object.keys(patch).length === 0) continue
+
+    let query = supabase
+      .from('product_variants')
+      .update(patch)
+      .eq('id', v.id)
+      .eq('product_id', productId)
+    if ('stock' in patch) query = query.eq('stock', before.stock)
+
+    const { data, error } = await query.select('id')
+    if (error) throw new Error(error.message)
+    if (!data || data.length === 0) throw new Error(STALE)
+  }
+
+  await insertVariants(
+    productId,
+    ordered.filter((v) => !v.id)
+  )
 }
+
+const STALE =
+  '그사이 옵션이나 재고가 바뀌었습니다. 새로고침해서 지금 값을 확인한 뒤 다시 저장해 주세요.'
 
 /** 삭제. 옵션은 `on delete cascade` 로 같이 지워진다 */
 export async function deleteProduct(id: string): Promise<void> {
