@@ -72,6 +72,16 @@ function Field({
   )
 }
 
+/** DB 가 돌려준 말은 영문이라 그대로 보이지 않는다. 고칠 수 있는 것만 짚는다 */
+function saveError(err: unknown): string {
+  const message = err instanceof Error ? err.message : ''
+  if (message.startsWith('그사이 옵션이나 재고가 바뀌었습니다.')) return message
+  if (message.includes('products_slug_key')) {
+    return '같은 slug 를 쓰는 상품이 이미 있습니다. 다른 slug 를 넣어 주세요.'
+  }
+  return '상품 저장을 완료하지 못했습니다. 입력값과 관리자 계정을 확인한 뒤 다시 시도해 주세요.'
+}
+
 const inputClass = 'w-full min-w-0 border border-gray-300 px-3 py-2 text-sm'
 
 export default function ProductForm({
@@ -178,12 +188,7 @@ export default function ProductForm({
         await createProduct(input, values)
       }
     } catch (err) {
-      setError(
-        err instanceof Error &&
-          err.message.startsWith('그사이 옵션이나 재고가 바뀌었습니다.')
-          ? err.message
-          : '상품 저장을 완료하지 못했습니다. 입력값과 관리자 계정을 확인한 뒤 다시 시도해 주세요.'
-      )
+      setError(saveError(err))
       savingRef.current = false
       setSaving(false)
       return
