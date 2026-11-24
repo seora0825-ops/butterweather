@@ -48,6 +48,23 @@ export async function listProducts(): Promise<Product[]> {
   return data ?? []
 }
 
+/** 옵션까지 전부 — 현장 계산기가 쓴다. 감춘 상품도 현장에서는 판다 */
+export async function listProductDetails(): Promise<ProductDetail[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, variants:product_variants(*)')
+    .order('category')
+    .order('name')
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((p) => ({
+    ...p,
+    variants: (p.variants ?? []).sort(
+      (a: ProductVariant, b: ProductVariant) => a.position - b.position
+    ),
+  }))
+}
+
 /** 하나 — 수정 폼을 채울 때. 옵션까지 같이 가져온다 */
 export async function getProduct(id: string): Promise<ProductDetail | null> {
   const supabase = createClient()
