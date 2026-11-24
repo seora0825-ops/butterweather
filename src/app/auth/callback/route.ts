@@ -29,8 +29,13 @@ export async function GET(request: Request) {
   const raw = searchParams.get('next') ?? '/'
   const next = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
 
+  // 실패해도 돌아갈 곳은 들고 간다. 손님이 구글·카카오에서 「취소」만 눌러도
+  // `no_code` 로 온다 — 버리면 장바구니에서 온 사람이 다시 로그인한 뒤
+  // 첫 화면에 떨어진다
+  const back = `&next=${encodeURIComponent(next)}`
+
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=no_code`)
+    return NextResponse.redirect(`${origin}/login?error=no_code${back}`)
   }
 
   const supabase = await createRouteClient()
@@ -39,7 +44,7 @@ export async function GET(request: Request) {
   if (error) {
     // 무엇이 틀렸는지 주소에 적지 않는다. 손님이 고칠 수 있는 것이 아니고,
     // 자세한 사정은 밖에 알릴 이유가 없다
-    return NextResponse.redirect(`${origin}/login?error=exchange`)
+    return NextResponse.redirect(`${origin}/login?error=exchange${back}`)
   }
 
   return NextResponse.redirect(`${origin}${next}`)
