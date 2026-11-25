@@ -3,8 +3,10 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import SalesLog from '@/components/admin/SalesLog'
+import { useCounterSync } from '@/components/admin/useCounterSync'
 import { PAYAPP_MIN_KRW, payappUrl, usesPayapp } from '@/lib/payapp'
 import { listProductDetails } from '@/lib/queries/adminProducts'
+import { saleStatus } from '@/lib/queries/counterSales'
 import { formatKRW } from '@/lib/queries/products'
 import {
   METHODS,
@@ -38,6 +40,9 @@ export default function CounterPage() {
   const pending = useCounter((s) => s.pending)
   const settings = useCounter((s) => s.settings)
   const total = totalKrw(lines)
+  const sync = useCounterSync()
+  /** 페이앱 통보로 저절로 기록된 금액. 다음 손님을 시작하면 지운다 */
+  const [confirmed, setConfirmed] = useState<number | null>(null)
 
   // 페이앱이 **새 탭으로** 돌아올 수 있다. 탭마다 기억이 따로라, 다시 읽지
   // 않으면 옛 탭이 낡은 상태로 판매 기록을 덮어쓰거나 같은 건을 두 번 남긴다
@@ -60,6 +65,17 @@ export default function CounterPage() {
     <div className="flex flex-col gap-8 text-sm">
       <h1 className="text-xl">현장 계산기</h1>
 
+      {sync.failed && sync.waiting > 0 ? (
+        <p role="status" className="border border-gray-300 p-3">
+          {`아직 저장되지 않은 기록이 ${sync.waiting}건 있습니다. 이 휴대폰에 남아 있고, 연결되면 저절로 저장합니다.`}
+        </p>
+      ) : null}
+      {confirmed !== null && lines.length === 0 ? (
+        <p role="status" className="border border-black p-3">
+          {`결제가 확인되어 기록했습니다. ${formatKRW(confirmed)}`}
+        </p>
+      ) : null}
+
       {pending ? null : <Picker />}
 
       <section aria-label="합계" className="border-t border-gray-300 pt-6">
@@ -79,10 +95,10 @@ export default function CounterPage() {
 
       {pending ? (
         <Suspense>
-          <Pending />
+          <Pending key={pending.id} onConfirmed={setConfirmed} />
         </Suspense>
       ) : (
-        <Methods />
+        <Methods onStart={() => setConfirmed(null)} />
       )}
 
       <SalesLog />
@@ -256,7 +272,7 @@ function Lines({ locked }: { locked: boolean }) {
   )
 }
 
-function Methods() {
+function Methods({ onStart }: { onStart: () => void }) {
   const start = useCounter((s) => s.start)
   const total = useCounter((s) => totalKrw(s.lines))
 
@@ -270,7 +286,10 @@ function Methods() {
             disabled={
               total <= 0 || (usesPayapp(m.id) && total < PAYAPP_MIN_KRW)
             }
-            onClick={() => start(m.id)}
+            onClick={() => {
+              onStart()
+              start(m.id)
+            }}
             className={BUTTON}
           >
             {m.label}
@@ -284,13 +303,45 @@ function Methods() {
   )
 }
 
-function Pending() {
+/** 페이앱 통보가 왔는지 이만큼마다 본다 */
+const POLL_MS = 2500
+
+function Pending({ onConfirmed }: { onConfirmed: (krw: number) => void }) {
   const pending = useCounter((s) => s.pending)
   const lines = useCounter((s) => s.lines)
   const account = useCounter((s) => s.settings.account)
   const back = useCounter((s) => s.back)
   const record = useCounter((s) => s.record)
   const params = useSearchParams()
+
+  const pendingId = pending?.id
+  const auto = pending !== null && usesPayapp(pending.method)
+
+  // 통보가 판매를 확정하면 저절로 넘어간다. 안 와도 사람이 누르면 된다
+  useEffect(() => {
+    if (!pendingId || !auto) return
+    let alive = true
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      saleStatus(pendingId).then(
+        (status) => {
+          const now = useCounter.getState()
+          if (!alive || status !== 'done' || now.pending?.id !== pendingId) {
+            return
+          }
+          onConfirmed(totalKrw(now.lines))
+          now.record(pendingId)
+        },
+        () => {
+          // 못 물어봤다. 다음에 다시 본다
+        }
+      )
+    }, POLL_MS)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [pendingId, auto, onConfirmed])
 
   if (!pending) return null
 
@@ -325,10 +376,7 @@ function Pending() {
       ) : null}
 
       {returned === '1' ? (
-        <p role="status">
-          페이앱이 결제 완료를 알렸습니다. 페이앱의 결제 내역을 확인한 뒤 기록해
-          주세요.
-        </p>
+        <p role="status">페이앱에서 돌아왔습니다. 결제를 확인하고 있습니다.</p>
       ) : null}
       {returned === '0' ? (
         <p role="alert">
@@ -339,7 +387,7 @@ function Pending() {
 
       <p>
         {payapp
-          ? '페이앱에서 결제 완료를 확인한 뒤 눌러 주세요.'
+          ? '결제가 확인되면 저절로 기록합니다. 넘어가지 않으면 페이앱에서 결제 완료를 확인한 뒤 눌러 주세요.'
           : pending.method === 'transfer'
             ? '입금 알림을 확인한 뒤 눌러 주세요.'
             : '돈을 받은 뒤 눌러 주세요.'}

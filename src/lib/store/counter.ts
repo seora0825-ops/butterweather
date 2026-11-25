@@ -4,14 +4,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 /**
- * 현장 계산기. **이 기기의 브라우저에만 남는다** — DB 에 쓰지 않는다.
+ * 현장 계산기. **먼저 이 기기에 적고, 뒤에서 DB 로 보낸다**(`0012`).
  *
- * 온라인 주문(`orders`)에 섞지 않는 이유는 둘이다. `orders.user_id` 가 회원을
- * 요구하는데 현장 손님은 회원이 아니고, 배송지도 없다. 현장 판매를 DB 에
- * 남기려면 표를 새로 만들어야 하고 그것은 마이그레이션이다.
+ * 매대는 통신이 끊긴다. 판매를 눌렀는데 「저장하지 못했습니다」가 뜨면 손님
+ * 앞에서 멈춘다. 그래서 `outbox` 에 먼저 넣고, 보내진 것만 뺀다
+ * (`useCounterSync`). 두 번 보내도 같은 id 라 하나다.
  *
- * ⚠️ 그래서 **휴대폰 두 대로 나눠 쓰면 기록도 둘로 나뉜다.** 브라우저의
- * 사이트 데이터를 지우면 사라진다. 하루가 끝나면 표로 복사해 둔다.
+ * 온라인 주문(`orders`)에 섞지 않는다 — 그 표는 회원과 배송지를 요구한다.
  *
  * ⚠️ **재고를 깎지 않는다.** 가져가는 수량을 온라인에서 먼저 빼 두는 전제다.
  */
@@ -35,12 +34,17 @@ export const METHODS = [
 
 export type Method = (typeof METHODS)[number]['id']
 
+/** waiting 기다림 · dropped 돌아감 · done 팔았음 · voided 지움 (`0012`) */
+export type SaleStatus = 'waiting' | 'dropped' | 'done' | 'voided'
+
 export type Sale = {
   id: string
   at: string
-  method: Method
+  /** `PAYAPP` 은 계산기를 거치지 않고 앱에서 바로 받은 것 */
+  method: Method | 'PAYAPP'
   lines: CounterLine[]
   totalKrw: number
+  status: SaleStatus
 }
 
 export type CounterSettings = {
@@ -55,15 +59,18 @@ type CounterState = {
   lines: CounterLine[]
   /** 결제를 기다리는 건. 페이앱에 다녀와도 남아 있어야 한다 */
   pending: { id: string; method: Method } | null
-  sales: Sale[]
+  /** 아직 DB 로 보내지 못한 것 */
+  outbox: Sale[]
   settings: CounterSettings
   add: (line: Omit<CounterLine, 'quantity'>) => void
   setQuantity: (key: string, quantity: number) => void
   clear: () => void
   start: (method: Method) => void
   back: () => void
+  /** 돈을 받았다. 사람이 누르거나, 페이앱 통보로 확정되면 부른다 */
   record: (pendingId: string) => void
-  removeSale: (id: string) => void
+  voidSale: (sale: Sale) => void
+  sent: (sales: Sale[]) => void
   setSettings: (patch: Partial<CounterSettings>) => void
 }
 
@@ -83,12 +90,17 @@ export function earnsGift(lines: CounterLine[], s: CounterSettings): boolean {
   )
 }
 
+/** 같은 판매는 마지막 상태 하나만 보낸다 */
+function queue(outbox: Sale[], sale: Sale): Sale[] {
+  return [sale, ...outbox.filter((s) => s.id !== sale.id)]
+}
+
 export const useCounter = create<CounterState>()(
   persist(
     (set) => ({
       lines: [],
       pending: null,
-      sales: [],
+      outbox: [],
       settings: {
         account: '',
         giftAmountKrw: null,
@@ -124,13 +136,45 @@ export const useCounter = create<CounterState>()(
       clear: () => set((s) => (s.pending ? s : { lines: [] })),
 
       start: (method) =>
-        set((s) =>
-          s.lines.length === 0 || s.pending
-            ? s
-            : { pending: { id: crypto.randomUUID(), method } }
-        ),
+        set((s) => {
+          if (s.lines.length === 0 || s.pending) return s
+          const id = crypto.randomUUID()
+          return {
+            pending: { id, method },
+            // 통보가 올 곳을 미리 만들어 둔다. 이체·현금은 올 통보가 없다
+            outbox:
+              method === 'transfer' || method === 'cash'
+                ? s.outbox
+                : queue(s.outbox, {
+                    id,
+                    at: new Date().toISOString(),
+                    method,
+                    lines: s.lines,
+                    totalKrw: totalKrw(s.lines),
+                    status: 'waiting',
+                  }),
+          }
+        }),
 
-      back: () => set({ pending: null }),
+      back: () =>
+        set((s) => {
+          const { pending } = s
+          if (!pending) return s
+          if (pending.method === 'transfer' || pending.method === 'cash') {
+            return { pending: null }
+          }
+          return {
+            pending: null,
+            outbox: queue(s.outbox, {
+              id: pending.id,
+              at: new Date().toISOString(),
+              method: pending.method,
+              lines: s.lines,
+              totalKrw: totalKrw(s.lines),
+              status: 'dropped',
+            }),
+          }
+        }),
 
       // 두 번 눌러도 한 번만 남는다 — 기다리던 건이 맞을 때만 기록한다
       record: (pendingId) =>
@@ -142,16 +186,44 @@ export const useCounter = create<CounterState>()(
             method: s.pending.method,
             lines: s.lines,
             totalKrw: totalKrw(s.lines),
+            status: 'done',
           }
-          return { sales: [sale, ...s.sales], lines: [], pending: null }
+          return {
+            outbox: queue(s.outbox, sale),
+            lines: [],
+            pending: null,
+          }
         }),
 
-      removeSale: (id) =>
-        set((s) => ({ sales: s.sales.filter((x) => x.id !== id) })),
+      voidSale: (sale) =>
+        set((s) => ({
+          outbox: queue(s.outbox, { ...sale, status: 'voided' }),
+        })),
+
+      // 보내는 사이에 상태가 바뀌었으면 남긴다. 바뀐 것을 다시 보내야 한다
+      sent: (sales) =>
+        set((s) => ({
+          outbox: s.outbox.filter(
+            (o) => !sales.some((x) => x.id === o.id && x.status === o.status)
+          ),
+        })),
 
       setSettings: (patch) =>
         set((s) => ({ settings: { ...s.settings, ...patch } })),
     }),
-    { name: 'butter-weather-counter', version: 1 }
+    {
+      name: 'butter-weather-counter',
+      version: 2,
+      // 1 은 기록을 `sales` 에 쌓아 두기만 했다. 그대로 보낼 것으로 옮긴다
+      migrate: (old) => {
+        const { sales = [], ...rest } = old as {
+          sales?: Omit<Sale, 'status'>[]
+        }
+        return {
+          ...rest,
+          outbox: sales.map((s) => ({ ...s, status: 'done' as const })),
+        } as CounterState
+      },
+    }
   )
 )

@@ -2,6 +2,7 @@ import { after } from 'next/server'
 import { sendOrderMail } from '@/lib/notify/orderMail'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyPaidError } from '@/lib/payments/complete'
+import { recordCounterPayment } from '@/lib/payments/counterPayment'
 import { isGenuineFeedback, refundPayment } from '@/lib/payments/payapp'
 
 /**
@@ -58,13 +59,19 @@ export async function POST(req: Request) {
   const state = form.get('pay_state') ?? ''
   const orderId = form.get('var1') ?? ''
 
-  // 현장 계산기·페이앱 앱에서 받은 결제도 같은 주소로 올 수 있다.
-  // 그것은 홈페이지 주문이 아니다
-  if (!mulNo || !/^[0-9a-f-]{36}$/i.test(orderId)) {
-    return success(`주문이 아닌 통보 (${state})`)
+  const admin = createAdminClient()
+
+  // 페이앱 관리자의 「공통 통보 URL」도 이 주소다. 현장 계산기·페이앱 앱에서
+  // 받은 결제가 그리로 온다 — 홈페이지 주문이 아니면 현장 장부에 적는다
+  async function counter(): Promise<Response> {
+    const problem = await recordCounterPayment(admin, form)
+    return problem
+      ? again(`현장 결제를 적지 못함: ${problem}`)
+      : success(`현장 결제 ${state}`)
   }
 
-  const admin = createAdminClient()
+  if (!mulNo || !/^[0-9a-f-]{36}$/i.test(orderId)) return counter()
+
   const read = () =>
     admin
       .from('orders')
@@ -74,7 +81,7 @@ export async function POST(req: Request) {
 
   const { data: order, error: readError } = await read()
   if (readError) return again(`주문을 읽지 못함: ${readError.message}`)
-  if (!order) return success(`모르는 주문 (${mulNo})`, 'error')
+  if (!order) return counter()
 
   /** 돈을 돌려준다. 안 되면 다시 받아서 또 해본다 */
   async function refund(reason: string): Promise<Response> {
