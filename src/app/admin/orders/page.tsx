@@ -83,7 +83,10 @@ export default function AdminOrdersPage() {
       {Array.isArray(orders) && (
         <>
           <div className="space-y-2">
-            <p>최근 주문 최대 100건 · 한국 시각</p>
+            <p>
+              결제 완료·배송 중은 전부, 나머지는 최근 100건입니다. 시각은 한국
+              시각입니다.
+            </p>
             <div
               role="group"
               aria-label="주문 상태"
