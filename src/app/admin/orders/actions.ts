@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { refundPayment } from '@/lib/payments/payapp'
 import { cancelPayment } from '@/lib/payments/portone'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -50,7 +51,7 @@ export async function cancelOrder(
   const db = createAdminClient()
   const { data: order } = await db
     .from('orders')
-    .select('id, status, payment_id')
+    .select('id, status, payment_id, payment_provider')
     .eq('order_no', orderNo)
     .maybeSingle()
 
@@ -68,12 +69,17 @@ export async function cancelOrder(
   // `pending` 은 결제된 적이 없어 돌려줄 것이 없다
   if (order.status === 'paid' && order.payment_id) {
     try {
-      await cancelPayment(order.payment_id, trimmed)
-    } catch {
+      if (order.payment_provider === 'payapp') {
+        await refundPayment(order.payment_id, trimmed)
+      } else {
+        await cancelPayment(order.payment_id, trimmed)
+      }
+    } catch (err) {
+      console.error('[admin] 결제 취소 실패', orderNo, err)
       return {
         ok: false,
         reason:
-          '결제를 취소하지 못했습니다. 주문은 그대로 두었습니다 — 포트원 콘솔에서 확인해 주세요.',
+          '결제를 취소하지 못했습니다. 주문은 그대로 두었습니다 — 페이앱 관리자에서 확인해 주세요. 정산된 결제는 그곳에서만 취소됩니다.',
       }
     }
   }

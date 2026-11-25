@@ -1,7 +1,10 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { findCarrier } from '@/lib/carriers'
+import PayButton from '@/components/shop/PayButton'
+import { PaymentDone, PaymentWaiting } from '@/components/shop/PaymentReturn'
 import { button } from '@/components/shop/button'
+import { canOrder } from '@/lib/orderingAccess'
 import { ORDER_STATUS_LABEL, hasVariantName } from '@/lib/orders'
 import { formatKRW } from '@/lib/queries/products'
 import { createClient } from '@/lib/supabase/server'
@@ -54,10 +57,14 @@ const statusDetails: Record<
 
 export default async function OrderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orderNo: string }>
+  searchParams: Promise<{ paid?: string }>
 }) {
   const { orderNo } = await params
+  // 결제창에서 돌아왔다는 표시일 뿐, 결제됐다는 뜻이 아니다 (PaymentReturn)
+  const returned = (await searchParams).paid === '1'
   const supabase = await createClient()
 
   // **로그인 안 했으면 404 가 아니라 로그인으로 보낸다.** 404 는 「없는
@@ -102,6 +109,7 @@ export default async function OrderPage({
   const shipping = data.shipping_info
   const items = data.items ?? []
 
+  const payable = data.status === 'pending' && (await canOrder(supabase))
   const carrier = findCarrier(data.carrier)
 
   const status = data.status === 'cancelled' ? null : statusDetails[data.status]
@@ -143,6 +151,18 @@ export default async function OrderPage({
         <p className="text-ink-muted text-[15px] tabular-nums">
           주문번호 {data.order_no}
         </p>
+        {data.status === 'pending' &&
+          (returned ? (
+            <PaymentWaiting orderNo={data.order_no} />
+          ) : payable ? (
+            <PayButton orderNo={data.order_no} />
+          ) : null)}
+        {data.status === 'paid' && returned && (
+          <PaymentDone
+            orderNo={data.order_no}
+            variantIds={items.flatMap((i) => i.variant_id ?? [])}
+          />
+        )}
         {data.tracking_no && (
           <div className="space-y-2">
             <dl>
