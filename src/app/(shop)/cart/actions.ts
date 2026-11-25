@@ -54,11 +54,13 @@ export async function alreadyOrderedVariantIds(
     Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000
   ).toISOString()
 
-  // RLS 가 남의 주문을 막는다 (`orders_own`). 여기서 user_id 를 다시
-  // 비교하지 않는 이유다
+  // **RLS 만 믿지 않고 `user_id` 를 좁힌다.** 관리자는 RLS 가 모든 주문을
+  // 열어 주므로(`orders_admin_all`), 안 좁히면 남이 산 것까지 「이미 주문하신
+  // 상품」으로 뜬다 (2026-11-25 Codex 리뷰)
   const { data } = await supabase
     .from('orders')
     .select('status, items:order_items(variant_id)')
+    .eq('user_id', user.id)
     .in('status', ['paid', 'shipped', 'done'])
     .gte('created_at', since)
 
