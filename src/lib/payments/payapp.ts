@@ -81,6 +81,19 @@ async function call(params: Record<string, string>): Promise<URLSearchParams> {
   return body
 }
 
+/**
+ * 손님을 보낼 주소. **페이앱 것만 받는다.** 문서의 예에는 `http://payapp.kr/…`
+ * 로도 온다(09 모바일) — 그대로 보내지 않고 https 로 올린다.
+ */
+export function safePayUrl(value: string | null): string | null {
+  if (!value || !URL.canParse(value)) return null
+  const url = new URL(value)
+  if (!/(^|\.)payapp\.kr$/.test(url.hostname)) return null
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
+  url.protocol = 'https:'
+  return url.toString()
+}
+
 /** 결제창 주소를 만든다. **만들었다고 결제된 것이 아니다** */
 export async function requestPayment(input: {
   orderId: string
@@ -106,8 +119,8 @@ export async function requestPayment(input: {
   })
 
   const mulNo = body.get('mul_no')
-  const payUrl = body.get('payurl')
-  if (!mulNo || !payUrl?.startsWith('https://')) {
+  const payUrl = safePayUrl(body.get('payurl'))
+  if (!mulNo || !payUrl) {
     throw new Error('페이앱이 결제 주소를 주지 않았습니다')
   }
   return { mulNo, payUrl }
@@ -148,9 +161,18 @@ function same(a: string | null, b: string): boolean {
   return timingSafeEqual(Buffer.from(sha256(a)), Buffer.from(sha256(b)))
 }
 
-/** 페이앱이 보낸 통보인가. **셋이 다 맞아야 한다** */
+/** 페이앱이 보낸 통보인가. **셋이 다 맞아야 한다** (userid·연동 KEY·연동 VALUE) */
 export function isGenuineFeedback(form: URLSearchParams): boolean {
-  const { userId, linkKey, linkValue } = credentials()
+  const { userId, linkKey, linkValue, payKey } = credentials()
+
+  // 문서는 hash 도 확인하라고 한다. **아직 막지는 않는다** — 테스트 모드가 없어
+  // 계산법이 맞는지 실제 통보로 본 적이 없고, 틀리면 낸 돈이 확정되지 않는다.
+  // 첫 실제 결제에서 이 log 가 안 나오면 아래 조건에 넣는다
+  const expected = sha256(userId + (form.get('responsedate') ?? '') + payKey)
+  if (form.get('hash')?.toLowerCase() !== expected) {
+    console.error('[payapp] 통보 hash 가 다르다')
+  }
+
   return [
     same(form.get('userid'), userId),
     same(form.get('linkkey'), linkKey),
