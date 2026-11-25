@@ -5,6 +5,7 @@ import SignOutButton from '@/components/shop/SignOutButton'
 import { button } from '@/components/shop/button'
 import { ChevronIcon } from '@/components/shop/icons'
 import { BUSINESS } from '@/lib/business'
+import { cn } from '@/lib/cn'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -28,10 +29,11 @@ export default async function AccountPage() {
   if (!user) redirect(`/login?next=${encodeURIComponent('/account')}`)
 
   const meta = user.user_metadata ?? {}
+  // 빈 문자열로 오는 칸이 있다. LoginForm 과 같은 순서로 비어 있지 않은 것을 쓴다
   const name =
-    (meta.name as string) ??
-    (meta.full_name as string) ??
-    (meta.preferred_username as string) ??
+    (meta.name as string) ||
+    (meta.full_name as string) ||
+    (meta.preferred_username as string) ||
     ''
 
   return (
@@ -39,11 +41,10 @@ export default async function AccountPage() {
       <h1 className="text-2xl font-extrabold tracking-tight">내 정보</h1>
       <Link
         href="/orders"
-        className={button({
-          tone: 'primary',
-          size: 'full',
-          className: 'justify-between',
-        })}
+        className={cn(
+          button({ tone: 'primary', size: 'full' }),
+          'justify-between'
+        )}
       >
         주문 내역
         <span className="-rotate-90">

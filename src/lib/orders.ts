@@ -17,3 +17,8 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 export function krw(n: number): string {
   return n.toLocaleString('ko-KR')
 }
+
+/** 옵션이 하나뿐인 물건의 옵션 이름은 「기본」이다 (`0001`). 손님에게 보일 말이 아니다 */
+export function hasVariantName(name: string): boolean {
+  return name !== '기본'
+}

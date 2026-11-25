@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { findCarrier } from '@/lib/carriers'
 import { button } from '@/components/shop/button'
+import { ORDER_STATUS_LABEL, hasVariantName } from '@/lib/orders'
 import { formatKRW } from '@/lib/queries/products'
 import { createClient } from '@/lib/supabase/server'
 import type { OrderDetail, OrderStatus } from '@/types/order'
@@ -22,7 +23,13 @@ import type { OrderDetail, OrderStatus } from '@/types/order'
  */
 export const dynamic = 'force-dynamic'
 
-const progressSteps = ['결제', '보냄', '끝남']
+/** 진행의 이름은 **주문 상태 이름을 그대로 쓴다** (writing.md 5절) */
+function progressSteps(status: OrderStatus): string[] {
+  return [status === 'pending' ? 'pending' : 'paid', 'shipped', 'done'].map(
+    (s) => ORDER_STATUS_LABEL[s as OrderStatus]
+  )
+}
+
 const statusDetails: Record<
   Exclude<OrderStatus, 'cancelled'>,
   { step: number; title: string; next?: string }
@@ -118,7 +125,7 @@ export default async function OrderPage({
             aria-label="주문 진행"
             className="divide-line border-line grid grid-cols-3 divide-x border-y text-center"
           >
-            {progressSteps.map((step, index) => (
+            {progressSteps(data.status).map((step, index) => (
               <li
                 key={step}
                 aria-current={index === status.step ? 'step' : undefined}
@@ -172,7 +179,9 @@ export default async function OrderPage({
               <div className="min-w-0 wrap-anywhere">
                 <p>{item.product_name}</p>
                 <p>
-                  {item.variant_name} · {item.quantity}개
+                  {hasVariantName(item.variant_name) &&
+                    `${item.variant_name} · `}
+                  {item.quantity}개
                 </p>
               </div>
               <p className="shrink-0 tabular-nums">

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import EmptyState from '@/components/shop/EmptyState'
 import { ChevronIcon } from '@/components/shop/icons'
-import { ORDER_STATUS_LABEL } from '@/lib/orders'
+import { ORDER_STATUS_LABEL, hasVariantName } from '@/lib/orders'
 import { formatKRW } from '@/lib/queries/products'
 import { createClient } from '@/lib/supabase/server'
 import type { OrderDetail, OrderItem } from '@/types/order'
@@ -20,7 +20,10 @@ export const dynamic = 'force-dynamic'
 /** 「그린가든 외 2건」 처럼 한 줄로 줄인다 */
 function summarize(items: OrderItem[]): string {
   if (items.length === 0) return '상품 없음'
-  const first = `${items[0].product_name} ${items[0].variant_name}`
+  const { product_name, variant_name } = items[0]
+  const first = hasVariantName(variant_name)
+    ? `${product_name} ${variant_name}`
+    : product_name
   return items.length === 1 ? first : `${first} 외 ${items.length - 1}건`
 }
 

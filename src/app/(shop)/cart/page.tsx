@@ -7,6 +7,7 @@ import EmptyState from '@/components/shop/EmptyState'
 import QuantityStepper from '@/components/shop/QuantityStepper'
 import { button } from '@/components/shop/button'
 import { ORDERING_OPEN, ORDER_LABEL } from '@/lib/shopStatus'
+import { hasVariantName } from '@/lib/orders'
 import { imageUrl } from '@/lib/images'
 import { formatKRW } from '@/lib/queries/products'
 import {
@@ -85,6 +86,29 @@ export default function CartPage() {
     setRemoved([])
   }
 
+  // 뺀 직후의 되돌리기. **합계 바로 위에 둔다** — 목록이 길면 맨 위의 안내는
+  // 화면 밖이라 못 본다
+  const undo = (
+    <div role="status">
+      {removed.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 pb-3">
+          <p className="wrap-anywhere">
+            {removed.length === 1
+              ? `${removed[0].productName} 을(를) 뺐습니다.`
+              : `상품 ${removed.length}개를 뺐습니다.`}
+          </p>
+          <button
+            type="button"
+            onClick={restoreLines}
+            className={button({ size: 'sm' })}
+          >
+            되돌리기
+          </button>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <main id="main" className="mx-auto max-w-2xl space-y-6 px-4 pt-8 text-base">
       <h1 className="text-2xl font-extrabold tracking-tight">장바구니</h1>
@@ -109,27 +133,11 @@ export default function CartPage() {
         </section>
       )}
 
-      <div role="status">
-        {removed.length > 0 && (
-          <div className="border-line flex flex-wrap items-center gap-x-3 border-t py-2">
-            <p className="wrap-anywhere">
-              {removed.length === 1
-                ? `${removed[0].productName} 을(를) 뺐습니다.`
-                : `상품 ${removed.length}개를 뺐습니다.`}
-            </p>
-            <button
-              type="button"
-              onClick={restoreLines}
-              className={button({ size: 'sm' })}
-            >
-              되돌리기
-            </button>
-          </div>
-        )}
-      </div>
-
       {lines.length === 0 ? (
-        <EmptyState motif="watering-can" message="담긴 것이 없습니다." />
+        <>
+          {undo}
+          <EmptyState motif="watering-can" message="담긴 것이 없습니다." />
+        </>
       ) : (
         <>
           <ul className="divide-line border-ink divide-y border-t-2">
@@ -137,7 +145,8 @@ export default function CartPage() {
               <li key={line.variantId} className="flex items-start gap-4 py-4">
                 <Link
                   href={`/products/${line.slug}`}
-                  aria-label={line.productName}
+                  aria-hidden
+                  tabIndex={-1}
                   className="aspect-tile border-line relative w-22 shrink-0 overflow-hidden border"
                 >
                   {line.image && (
@@ -153,8 +162,13 @@ export default function CartPage() {
                 <div className="min-w-0 flex-1 space-y-2 wrap-anywhere">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                     <div className="min-w-0">
-                      <p className="font-bold">{line.productName}</p>
-                      {line.variantName !== '기본' && (
+                      <Link
+                        href={`/products/${line.slug}`}
+                        className="font-bold hover:underline"
+                      >
+                        {line.productName}
+                      </Link>
+                      {hasVariantName(line.variantName) && (
                         <p className="text-ink-muted text-[15px]">
                           {line.variantName}
                         </p>
@@ -188,10 +202,7 @@ export default function CartPage() {
             ))}
           </ul>
 
-          <section
-            aria-label="주문 금액"
-            className="border-ink bg-cloud sticky bottom-0 z-10 space-y-3 border-t-2 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:static sm:pb-8"
-          >
+          <section aria-label="주문 금액" className="space-y-1">
             <dl className="space-y-1 tabular-nums">
               <div className="flex justify-between gap-2">
                 <dt>상품</dt>
@@ -201,14 +212,24 @@ export default function CartPage() {
                 <dt>배송비</dt>
                 <dd>{shippingKrw === 0 ? '무료' : formatKRW(shippingKrw)}</dd>
               </div>
-              <div className="border-line flex justify-between gap-2 border-t pt-2 text-xl font-extrabold">
-                <dt>합계</dt>
-                <dd>{formatKRW(total)}</dd>
-              </div>
             </dl>
             {untilFree > 0 && (
-              <p>{formatKRW(untilFree)} 더 담으면 배송비가 무료입니다.</p>
+              <p className="text-ink-muted text-[15px]">
+                {formatKRW(untilFree)} 더 담으면 배송비가 무료입니다.
+              </p>
             )}
+          </section>
+
+          {/* 합계와 button 만 붙여 둔다. 금액을 전부 붙이면 작은 화면의
+              3분의 1을 가린다 */}
+          <section
+            aria-label="합계"
+            className="border-ink bg-cloud sticky bottom-0 z-10 -mx-4 border-t-2 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:px-0"
+          >
+            {undo}
+            <p className="mb-3 flex justify-between gap-2 text-xl font-extrabold tabular-nums">
+              합계 <span>{formatKRW(total)}</span>
+            </p>
             {ORDERING_OPEN ? (
               <Link
                 href="/checkout"
