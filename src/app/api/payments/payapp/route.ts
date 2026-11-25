@@ -43,6 +43,16 @@ function again(note: string) {
   return new Response('FAIL', { status: 500 })
 }
 
+/**
+ * 사람이 주소를 열어 볼 때. 결제와 상관없다 — 통보는 POST 로만 온다.
+ * `SUCCESS` 라고 답하지 않는다. 그 말은 통보를 받았다는 뜻이다.
+ */
+export function GET() {
+  return new Response('이 주소는 페이앱이 결제 결과를 알려주는 곳입니다.', {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}
+
 export async function POST(req: Request) {
   const form = new URLSearchParams(await req.text())
 
