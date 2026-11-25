@@ -7,10 +7,10 @@ import { getProducts } from '@/lib/queries/products'
 export const revalidate = 60
 
 const ART = [
-  '/illustrations/pattern-flower-cluster.svg',
-  '/illustrations/motif-tulip.svg',
-  '/illustrations/pattern-red-berry.svg',
-  '/illustrations/motif-palm-island.svg',
+  '/illustrations/figma/watering-can-yellow.svg',
+  '/illustrations/figma/tulip-sky.svg',
+  '/illustrations/figma/flower-green.svg',
+  '/illustrations/figma/scribble-purple.svg',
 ]
 
 /**

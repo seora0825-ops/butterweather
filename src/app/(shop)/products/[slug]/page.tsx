@@ -57,8 +57,15 @@ export default async function ProductPage({ params }: Props) {
   return (
     <main id="main">
       <div className="lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
-        <div className="lg:border-ink lg:border-r-2">
-          <ProductGallery images={product.images} alt={product.name} />
+        <div className="lg:border-ink flex lg:border-r-2">
+          {/* 사진 왼쪽의 세로 띠. 나래의 긴 상세 시안에서 왔다 */}
+          <div
+            aria-hidden
+            className={`${category?.board ?? 'bg-board-ink'} w-5 shrink-0 lg:w-12`}
+          />
+          <div className="min-w-0 flex-1">
+            <ProductGallery images={product.images} alt={product.name} />
+          </div>
         </div>
 
         <div className="px-4 pt-6 lg:sticky lg:top-16 lg:max-w-xl lg:px-10 lg:py-12">

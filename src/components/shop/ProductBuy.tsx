@@ -123,9 +123,7 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
       )}
 
       {onlyOne && available(1) && (
-        <p className="mt-6 text-[15px] font-semibold">
-          손으로 만든 단 하나입니다.
-        </p>
+        <p className="mt-6 text-[15px] font-semibold">하나뿐입니다.</p>
       )}
 
       {variant && !onlyOne && available(variant.stock) && (

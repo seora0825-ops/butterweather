@@ -18,6 +18,13 @@
   --color-ink-muted: #6b6b6b;
   --color-line: #d9d9d9;
 
+  /* 나래 피그마의 단색 보드 (butter_weather_2). 흰 글자는 **큰 글자만** 얹는다 —
+     orange·blue 위의 흰 글자는 작으면 읽기 어렵다 */
+  --color-board-orange: #ff4c00;
+  --color-board-blue: #0088ff;
+  --color-board-purple: #8800ff;
+  --color-board-ink: #121314;
+
   /* 이나래 일러스트 원본의 비율. 상품 사진도 같은 타일에 담는다 */
   --aspect-tile: 234 / 279;
 

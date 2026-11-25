@@ -5,37 +5,38 @@ import { CATEGORIES } from '@/lib/categories'
 /**
  * 첫 화면 맨 위의 타일 여섯 장. **장식이 아니라 카테고리 메뉴다.**
  *
- * 그림과 무늬가 한 장씩 번갈아 맞닿는 것은 이나래의 원본 시트 그대로다.
+ * 단색 보드의 왼쪽 아래에 굵은 흰 글자를 놓은 것은 나래의 피그마 보드
+ * (`BUTTER WEATHER`)를 따랐다. 보드와 무늬가 번갈아 맞닿는다.
  * 첫 화면에서 물건이 바로 보여야 하므로(foundation.md 5-15절) 한 줄만 쓴다.
  */
 export default function TileStrip() {
   return (
-    <nav aria-label="카테고리" className="grid grid-cols-3">
+    <nav
+      aria-label="카테고리"
+      className="border-ink grid grid-cols-1 border-b-2 sm:grid-cols-3"
+    >
       {CATEGORIES.map((c) => (
         <Link
           key={c.id}
           href={`/category/${c.id}`}
-          className="group block focus-visible:z-10"
+          className="group grid grid-cols-2 focus-visible:z-10"
         >
-          <span className="grid grid-cols-2">
-            {[c.motif, c.pattern].map((src) => (
-              <span
-                key={src}
-                className="aspect-tile relative block overflow-hidden lg:aspect-[234/220]"
-              >
-                <Image
-                  src={src}
-                  alt=""
-                  fill
-                  unoptimized
-                  priority
-                  className="ease-out-expo scale-[1.03] object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-              </span>
-            ))}
+          <span
+            className={`${c.board} sm:aspect-tile flex h-24 items-end p-3 sm:h-auto lg:aspect-[234/200] lg:p-5`}
+          >
+            <span className="text-3xl leading-none font-extrabold tracking-tight text-white underline-offset-8 group-hover:underline group-hover:decoration-4 lg:text-5xl">
+              {c.label}
+            </span>
           </span>
-          <span className="border-ink group-hover:bg-ink group-hover:text-cloud block border-b-2 py-3 text-center text-base font-extrabold md:text-lg">
-            {c.label}
+          <span className="relative block overflow-hidden">
+            <Image
+              src={c.pattern}
+              alt=""
+              fill
+              unoptimized
+              priority
+              className="ease-out-expo scale-[1.03] object-cover transition-transform duration-500 group-hover:scale-110"
+            />
           </span>
         </Link>
       ))}
