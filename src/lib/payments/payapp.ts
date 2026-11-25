@@ -165,19 +165,22 @@ function same(a: string | null, b: string): boolean {
 export function isGenuineFeedback(form: URLSearchParams): boolean {
   const { userId, linkKey, linkValue, payKey } = credentials()
 
-  // 문서는 hash 도 확인하라고 한다. **아직 막지는 않는다** — 테스트 모드가 없어
-  // 계산법이 맞는지 실제 통보로 본 적이 없고, 틀리면 낸 돈이 확정되지 않는다.
-  // 첫 실제 결제에서 이 log 가 안 나오면 아래 조건에 넣는다
-  const expected = sha256(userId + (form.get('responsedate') ?? '') + payKey)
-  if (form.get('hash')?.toLowerCase() !== expected) {
-    console.error('[payapp] 통보 hash 가 다르다')
-  }
-
-  return [
+  const genuine = [
     same(form.get('userid'), userId),
     same(form.get('linkkey'), linkKey),
     same(form.get('linkval'), linkValue),
   ].every(Boolean)
+
+  // 문서는 hash 도 확인하라고 한다. **아직 막지는 않는다** — 테스트 모드가 없어
+  // 계산법이 맞는지 실제 통보로 본 적이 없고, 틀리면 낸 돈이 확정되지 않는다.
+  // 첫 실제 결제에서 이 log 가 안 나오면 위 조건에 넣는다.
+  // 진짜 통보일 때만 남긴다 — 남의 요청까지 남기면 그 판단을 못 한다
+  const expected = sha256(userId + (form.get('responsedate') ?? '') + payKey)
+  if (genuine && form.get('hash')?.toLowerCase() !== expected) {
+    console.error('[payapp] 통보 hash 가 다르다')
+  }
+
+  return genuine
 }
 
 /** 결제 문서에 적는 이름 */
