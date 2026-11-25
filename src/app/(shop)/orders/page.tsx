@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import EmptyState from '@/components/shop/EmptyState'
+import { ChevronIcon } from '@/components/shop/icons'
 import { ORDER_STATUS_LABEL } from '@/lib/orders'
 import { formatKRW } from '@/lib/queries/products'
 import { createClient } from '@/lib/supabase/server'
@@ -41,42 +43,44 @@ export default async function OrdersPage() {
   const orders = (data ?? []) as OrderDetail[]
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-4 text-sm">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">주문 내역</h1>
-        {!error && <p>{orders.length}건</p>}
-      </header>
+    <main id="main" className="mx-auto max-w-2xl space-y-6 px-4 py-8 text-base">
+      <h1 className="text-2xl font-extrabold tracking-tight">주문 내역</h1>
 
       {error ? (
         <p role="alert">
           주문 내역을 불러오지 못했습니다. 페이지를 새로고침해 주세요.
         </p>
       ) : orders.length === 0 ? (
-        <section aria-label="빈 주문 내역" className="space-y-3">
-          <p>아직 주문이 없습니다.</p>
-          <Link href="/" className="underline">
-            상품 보러 가기
-          </Link>
-        </section>
+        <EmptyState motif="blue-flower" message="아직 주문이 없습니다." />
       ) : (
-        <ul className="divide-y divide-gray-300 border-y border-gray-300">
+        <ul className="divide-line border-ink divide-y border-t-2">
           {orders.map((order) => (
             <li key={order.id}>
               <Link
                 href={`/orders/${order.order_no}`}
-                className="block space-y-2 py-3 wrap-anywhere"
+                className="flex items-center justify-between gap-3 py-4 hover:underline"
               >
-                <time dateTime={order.created_at}>
-                  {new Date(order.created_at).toLocaleDateString('ko-KR', {
-                    timeZone: 'Asia/Seoul',
-                  })}
-                </time>
-                <p className="underline">{order.order_no}</p>
-                <p>{summarize(order.items)}</p>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span>{ORDER_STATUS_LABEL[order.status]}</span>
-                  <span>{formatKRW(order.total_krw)}</span>
+                <div className="min-w-0 space-y-1 wrap-anywhere">
+                  <p className="text-xl font-extrabold tracking-tight">
+                    {ORDER_STATUS_LABEL[order.status]}
+                  </p>
+                  <p>{summarize(order.items)}</p>
+                  <p className="text-ink-muted text-[15px] tabular-nums">
+                    <time dateTime={order.created_at}>
+                      {new Date(order.created_at).toLocaleDateString('ko-KR', {
+                        timeZone: 'Asia/Seoul',
+                      })}
+                    </time>
+                    {' · '}
+                    {order.order_no}
+                  </p>
+                  <p className="font-bold tabular-nums">
+                    {formatKRW(order.total_krw)}
+                  </p>
                 </div>
+                <span className="-rotate-90">
+                  <ChevronIcon />
+                </span>
               </Link>
             </li>
           ))}

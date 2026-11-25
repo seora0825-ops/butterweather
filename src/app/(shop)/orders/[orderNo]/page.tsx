@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { findCarrier } from '@/lib/carriers'
-import { ORDER_STATUS_LABEL } from '@/lib/orders'
+import { button } from '@/components/shop/button'
 import { formatKRW } from '@/lib/queries/products'
 import { createClient } from '@/lib/supabase/server'
-import type { OrderDetail } from '@/types/order'
+import type { OrderDetail, OrderStatus } from '@/types/order'
 
 /**
  * 주문 하나. 주문서를 만들고 나면 여기로 온다.
@@ -21,6 +21,29 @@ import type { OrderDetail } from '@/types/order'
  * 때문이다. uuid 는 전화로 불러줄 수 없다 (schema.md 7-3절).
  */
 export const dynamic = 'force-dynamic'
+
+const progressSteps = ['결제', '보냄', '끝남']
+const statusDetails: Record<
+  Exclude<OrderStatus, 'cancelled'>,
+  { step: number; title: string; next?: string }
+> = {
+  pending: {
+    step: 0,
+    title: '아직 결제가 완료되지 않았습니다.',
+    next: '결제가 완료되면 상품을 준비합니다.',
+  },
+  paid: {
+    step: 0,
+    title: '결제가 완료되었습니다.',
+    next: '상품이 준비되는 대로 보내드립니다.',
+  },
+  shipped: {
+    step: 1,
+    title: '상품을 보내드렸습니다.',
+    next: '상품이 배송지에 도착하면 배송이 끝납니다.',
+  },
+  done: { step: 2, title: '배송이 끝났습니다.' },
+}
 
 export default async function OrderPage({
   params,
@@ -52,12 +75,15 @@ export default async function OrderPage({
 
   if (error) {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-4 text-sm">
-        <h1 className="text-xl font-semibold">주문 상세</h1>
+      <main
+        id="main"
+        className="mx-auto max-w-2xl space-y-4 px-4 py-8 text-base"
+      >
+        <h1 className="text-2xl font-extrabold tracking-tight">주문 상세</h1>
         <p role="alert">
           주문을 불러오지 못했습니다. 페이지를 새로고침해 주세요.
         </p>
-        <Link href="/orders" className="underline">
+        <Link href="/orders" className={button()}>
           주문 내역
         </Link>
       </main>
@@ -71,66 +97,73 @@ export default async function OrderPage({
 
   const carrier = findCarrier(data.carrier)
 
-  return (
-    <main className="mx-auto max-w-3xl space-y-6 p-4 text-sm">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">주문 상세</h1>
-        <p>{ORDER_STATUS_LABEL[data.status]}</p>
-      </header>
+  const status = data.status === 'cancelled' ? null : statusDetails[data.status]
 
-      <section
-        aria-label="주문번호 및 배송 조회"
-        className="space-y-3 border-y border-gray-300 py-3 wrap-anywhere"
-      >
-        <dl>
-          <dt>주문번호</dt>
-          <dd className="font-semibold">{data.order_no}</dd>
-        </dl>
-        {data.status === 'pending' ? (
-          <>
-            <p>주문서가 만들어졌습니다. 아직 결제가 완료되지 않았습니다.</p>
-            {/* 결제 대기 상태에서 결제 button을 연결할 자리다. */}
-          </>
-        ) : data.status === 'shipped' || data.status === 'done' ? (
-          // 보낸 뒤에는 송장번호가 이 화면에서 제일 필요한 정보다.
-          <>
-            <p>
-              {data.status === 'done'
-                ? '배송이 끝났습니다.'
-                : '보내드렸습니다.'}
-            </p>
-            {data.tracking_no && (
-              <>
-                <dl>
-                  <dt>송장번호</dt>
-                  <dd>
-                    {carrier?.name ?? data.carrier} {data.tracking_no}
-                  </dd>
-                </dl>
-                {carrier && (
-                  <a
-                    href={carrier.trackUrl(data.tracking_no)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline"
-                  >
-                    배송 조회
-                  </a>
-                )}
-                {carrier?.needsManualInput && (
-                  <p>조회 화면에서 위 번호를 넣어 주세요.</p>
-                )}
-              </>
+  return (
+    <main id="main" className="mx-auto max-w-2xl space-y-8 px-4 py-8 text-base">
+      <h1 className="text-2xl font-extrabold tracking-tight">주문 상세</h1>
+
+      <section aria-label="주문 상태" className="space-y-4 wrap-anywhere">
+        <div className="space-y-1">
+          <h2 className="text-xl font-extrabold tracking-tight">
+            {status?.title ?? '주문이 취소되었습니다.'}
+          </h2>
+          {status?.next && <p>{status.next}</p>}
+          {data.status === 'cancelled' && data.cancel_reason && (
+            <p>취소 사유: {data.cancel_reason}</p>
+          )}
+        </div>
+        {status && (
+          <ol
+            aria-label="주문 진행"
+            className="divide-line border-line grid grid-cols-3 divide-x border-y text-center"
+          >
+            {progressSteps.map((step, index) => (
+              <li
+                key={step}
+                aria-current={index === status.step ? 'step' : undefined}
+                className={
+                  index === status.step
+                    ? 'py-3 font-extrabold'
+                    : 'text-ink-muted py-3'
+                }
+              >
+                {step}
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="text-ink-muted text-[15px] tabular-nums">
+          주문번호 {data.order_no}
+        </p>
+        {data.tracking_no && (
+          <div className="space-y-2">
+            <dl>
+              <dt className="font-bold">송장번호</dt>
+              <dd className="tabular-nums">
+                {carrier?.name ?? data.carrier} {data.tracking_no}
+              </dd>
+            </dl>
+            {carrier?.needsManualInput && (
+              <p>조회 화면에서 위 번호를 넣어 주세요.</p>
             )}
-          </>
-        ) : data.status === 'paid' ? (
-          <p>주문이 확정되었습니다. 준비되는 대로 보내드립니다.</p>
-        ) : null}
+            {carrier && (
+              <a
+                href={carrier.trackUrl(data.tracking_no)}
+                target="_blank"
+                rel="noreferrer"
+                className={button({ tone: 'primary' })}
+              >
+                배송 조회
+              </a>
+            )}
+          </div>
+        )}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">주문 상품</h2>
-        <ul className="divide-y divide-gray-300 border-y border-gray-300">
+      <section className="border-ink space-y-3 border-t-2 pt-4">
+        <h2 className="text-xl font-extrabold tracking-tight">주문 상품</h2>
+        <ul className="divide-line divide-y">
           {items.map((item) => (
             <li
               key={item.id}
@@ -142,13 +175,13 @@ export default async function OrderPage({
                   {item.variant_name} · {item.quantity}개
                 </p>
               </div>
-              <p className="shrink-0">
+              <p className="shrink-0 tabular-nums">
                 {formatKRW(item.price_krw * item.quantity)}
               </p>
             </li>
           ))}
         </ul>
-        <dl className="space-y-2">
+        <dl className="border-line space-y-2 border-t pt-3 tabular-nums">
           <div className="flex justify-between gap-2">
             <dt>상품</dt>
             <dd>{formatKRW(data.items_krw)}</dd>
@@ -161,16 +194,16 @@ export default async function OrderPage({
                 : formatKRW(data.shipping_fee_krw)}
             </dd>
           </div>
-          <div className="flex justify-between gap-2 font-semibold">
+          <div className="flex justify-between gap-2 text-xl font-extrabold">
             <dt>합계</dt>
             <dd>{formatKRW(data.total_krw)}</dd>
           </div>
         </dl>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">배송지</h2>
-        <dl className="divide-y divide-gray-300 border-y border-gray-300">
+      <section className="border-ink space-y-3 border-t-2 pt-4">
+        <h2 className="text-xl font-extrabold tracking-tight">배송지</h2>
+        <dl className="divide-line divide-y">
           {[
             ['받는 분', shipping.name],
             ['연락처', shipping.phone],
@@ -189,10 +222,10 @@ export default async function OrderPage({
       </section>
 
       <div className="flex flex-wrap gap-4">
-        <Link href="/orders" className="underline">
+        <Link href="/orders" className={button()}>
           주문 내역
         </Link>
-        <Link href="/" className="underline">
+        <Link href="/" className={button()}>
           계속 둘러보기
         </Link>
       </div>

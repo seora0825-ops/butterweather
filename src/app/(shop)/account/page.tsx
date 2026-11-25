@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import WithdrawButton from '@/components/WithdrawButton'
+import SignOutButton from '@/components/shop/SignOutButton'
+import { button } from '@/components/shop/button'
+import { ChevronIcon } from '@/components/shop/icons'
 import { BUSINESS } from '@/lib/business'
 import { createClient } from '@/lib/supabase/server'
 
@@ -32,16 +35,24 @@ export default async function AccountPage() {
     ''
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-4 text-sm">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">내 정보</h1>
-        <Link href="/orders" className="underline">
-          주문 내역
-        </Link>
-      </header>
+    <main id="main" className="mx-auto max-w-2xl space-y-6 px-4 py-8 text-base">
+      <h1 className="text-2xl font-extrabold tracking-tight">내 정보</h1>
+      <Link
+        href="/orders"
+        className={button({
+          tone: 'primary',
+          size: 'full',
+          className: 'justify-between',
+        })}
+      >
+        주문 내역
+        <span className="-rotate-90">
+          <ChevronIcon />
+        </span>
+      </Link>
 
       <section aria-label="계정 정보" className="space-y-3">
-        <dl className="divide-y divide-gray-300 border-y border-gray-300">
+        <dl className="divide-line border-ink divide-y border-t-2">
           {[
             ['이름', name || '—'],
             ['이메일', user.email ?? '—'],
@@ -57,16 +68,20 @@ export default async function AccountPage() {
         </p>
       </section>
 
-      <section className="space-y-3 border-t border-gray-300 pt-4">
-        <h2 className="font-semibold">회원 탈퇴</h2>
-        <WithdrawButton />
+      <SignOutButton />
+
+      <section className="border-ink space-y-2 border-t-2 pt-4">
         <p className="wrap-anywhere">
           정보를 보거나 고치고 싶으시면{' '}
-          <a href={`mailto:${BUSINESS.email}`} className="underline">
+          <a
+            href={`mailto:${BUSINESS.email}`}
+            className="inline-flex min-h-11 items-center underline"
+          >
             {BUSINESS.email}
           </a>
           로 말씀해 주세요.
         </p>
+        <WithdrawButton />
       </section>
     </main>
   )

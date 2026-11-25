@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { button } from '@/components/shop/button'
 import { withdraw } from '@/app/(shop)/account/actions'
 import { createClient } from '@/lib/supabase/browser'
 import { useCart } from '@/lib/store/cart'
@@ -62,7 +63,7 @@ export default function WithdrawButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="border border-gray-300 px-3 py-2"
+        className="text-ink-muted min-h-11 cursor-pointer text-[15px] underline"
       >
         회원 탈퇴
       </button>
@@ -70,7 +71,7 @@ export default function WithdrawButton() {
   }
 
   return (
-    <div className="space-y-3 border border-gray-300 p-3 text-sm">
+    <div className="space-y-3 text-base">
       {!withdrawn && (
         <>
           <p>
@@ -98,7 +99,7 @@ export default function WithdrawButton() {
           type="button"
           onClick={run}
           disabled={busy}
-          className="border border-gray-300 px-3 py-2 disabled:opacity-40"
+          className={button()}
         >
           {busy
             ? '처리하는 중…'
@@ -114,7 +115,7 @@ export default function WithdrawButton() {
               setError(null)
             }}
             disabled={busy}
-            className="px-3 py-2 underline disabled:opacity-40"
+            className={button()}
           >
             그만두기
           </button>

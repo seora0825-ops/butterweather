@@ -3,20 +3,23 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import EmptyState from '@/components/shop/EmptyState'
+import QuantityStepper from '@/components/shop/QuantityStepper'
+import { button } from '@/components/shop/button'
+import { ORDERING_OPEN, ORDER_LABEL } from '@/lib/shopStatus'
 import { imageUrl } from '@/lib/images'
 import { formatKRW } from '@/lib/queries/products'
-import { cartTotalKrw, useCart, useCartLines } from '@/lib/store/cart'
+import {
+  cartTotalKrw,
+  useCart,
+  useCartLines,
+  type CartLine,
+} from '@/lib/store/cart'
 import { amountUntilFreeShipping, shippingFee } from '@/lib/shipping'
 import { alreadyOrderedVariantIds } from './actions'
 
 /**
  * 장바구니. 주소는 `/cart` 다.
- *
- * **서랍(drawer)이 아니라 화면이다.** 옛 레포는 `openCart` 같은 상태만
- * 만들어두고 화면을 끝내지 않았다 — 계승할 것이 없어 새로 정했다.
- * 서랍은 화면 위에 큰 면을 덮는데, 계승한 디자인은 **얇은 선으로 나뉜
- * 인쇄물**이라 그 위에 떠 있는 면이 어울리지 않는다 (foundation.md 5-6절
- * 「UI 는 면을 갖지 않고 틈에 산다」).
  *
  * **담긴 것은 브라우저에만 있다.** 그래서 이 화면은 client 다.
  *
@@ -39,6 +42,8 @@ export default function CartPage() {
   const lines = useCartLines()
   const setQuantity = useCart((s) => s.setQuantity)
   const remove = useCart((s) => s.remove)
+  const add = useCart((s) => s.add)
+  const [removed, setRemoved] = useState<CartLine[]>([])
   const [ordered, setOrdered] = useState<string[]>([])
 
   // 담긴 것이 바뀔 때마다 다시 묻는다. 로그인하지 않았으면 빈 배열이 온다.
@@ -70,103 +75,124 @@ export default function CartPage() {
   const total = itemsKrw + shippingKrw
   const untilFree = amountUntilFreeShipping(itemsKrw)
 
+  function removeLines(removedLines: CartLine[]) {
+    removedLines.forEach((line) => remove(line.variantId))
+    setRemoved(removedLines)
+  }
+
+  function restoreLines() {
+    removed.forEach(({ quantity, ...line }) => add(line, quantity))
+    setRemoved([])
+  }
+
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-4 text-sm">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">장바구니</h1>
-        <p>{lines.length}개 품목</p>
-      </header>
+    <main id="main" className="mx-auto max-w-2xl space-y-6 px-4 pt-8 text-base">
+      <h1 className="text-2xl font-extrabold tracking-tight">장바구니</h1>
 
       {orderedInCart.length > 0 && (
         <section
           aria-label="이미 주문한 상품"
-          className="space-y-3 border border-gray-300 p-3"
+          className="border-ink space-y-2 border-t-2 pt-4"
         >
           <p>최근에 주문하신 상품이 {orderedInCart.length}개 담겨 있습니다.</p>
           <button
             type="button"
-            onClick={() => orderedInCart.forEach(remove)}
-            className="border border-gray-300 px-3 py-2"
+            onClick={() =>
+              removeLines(
+                lines.filter((line) => orderedInCart.includes(line.variantId))
+              )
+            }
+            className={button({ size: 'sm' })}
           >
             이미 주문한 것 빼기
           </button>
         </section>
       )}
 
+      <div role="status">
+        {removed.length > 0 && (
+          <div className="border-line flex flex-wrap items-center gap-x-3 border-t py-2">
+            <p className="wrap-anywhere">
+              {removed.length === 1
+                ? `${removed[0].productName} 을(를) 뺐습니다.`
+                : `상품 ${removed.length}개를 뺐습니다.`}
+            </p>
+            <button
+              type="button"
+              onClick={restoreLines}
+              className={button({ size: 'sm' })}
+            >
+              되돌리기
+            </button>
+          </div>
+        )}
+      </div>
+
       {lines.length === 0 ? (
-        <section aria-label="빈 장바구니" className="space-y-3">
-          <p>담긴 것이 없습니다.</p>
-          <Link href="/" className="underline">
-            상품 보러 가기
-          </Link>
-        </section>
+        <EmptyState motif="watering-can" message="담긴 것이 없습니다." />
       ) : (
         <>
-          <ul className="divide-y divide-gray-300 border-y border-gray-300">
+          <ul className="divide-line border-ink divide-y border-t-2">
             {lines.map((line) => (
-              <li key={line.variantId} className="space-y-3 py-3">
-                <div className="flex items-start gap-3">
+              <li key={line.variantId} className="flex items-start gap-4 py-4">
+                <Link
+                  href={`/products/${line.slug}`}
+                  aria-label={line.productName}
+                  className="aspect-tile border-line relative w-22 shrink-0 overflow-hidden border"
+                >
                   {line.image && (
-                    <div className="relative size-20 shrink-0 overflow-hidden">
-                      <Image
-                        src={imageUrl(line.image)}
-                        alt=""
-                        fill
-                        sizes="80px"
-                        className="object-cover"
-                      />
-                    </div>
+                    <Image
+                      src={imageUrl(line.image)}
+                      alt=""
+                      fill
+                      sizes="88px"
+                      className="object-cover"
+                    />
                   )}
-                  <div className="min-w-0 wrap-anywhere">
-                    <Link href={`/products/${line.slug}`} className="underline">
-                      {line.productName}
-                    </Link>
-                    <p>{line.variantName}</p>
-                    <p>{formatKRW(line.priceKrw)}</p>
+                </Link>
+                <div className="min-w-0 flex-1 space-y-2 wrap-anywhere">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                    <div className="min-w-0">
+                      <p className="font-bold">{line.productName}</p>
+                      {line.variantName !== '기본' && (
+                        <p className="text-ink-muted text-[15px]">
+                          {line.variantName}
+                        </p>
+                      )}
+                    </div>
+                    <p className="font-bold tabular-nums">
+                      {formatKRW(line.priceKrw * line.quantity)}
+                    </p>
                   </div>
-                </div>
-
-                {/* 수량 — 상세와 같은 − 1 + 이다 */}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <QuantityStepper
+                      value={line.quantity}
+                      min={1}
+                      max={line.stock}
+                      label={line.productName}
+                      onChange={(quantity) =>
+                        setQuantity(line.variantId, quantity)
+                      }
+                    />
                     <button
                       type="button"
-                      onClick={() =>
-                        setQuantity(line.variantId, line.quantity - 1)
-                      }
-                      aria-label="수량 줄이기"
-                      className="size-8 border border-gray-300"
+                      onClick={() => removeLines([line])}
+                      aria-label={`${line.productName} 빼기`}
+                      className={button({ size: 'sm' })}
                     >
-                      −
-                    </button>
-                    <span aria-live="polite">{line.quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setQuantity(line.variantId, line.quantity + 1)
-                      }
-                      disabled={line.quantity >= line.stock}
-                      aria-label="수량 늘리기"
-                      className="size-8 border border-gray-300 disabled:opacity-40"
-                    >
-                      +
+                      빼기
                     </button>
                   </div>
-                  <p>{formatKRW(line.priceKrw * line.quantity)}</p>
-                  <button
-                    type="button"
-                    onClick={() => remove(line.variantId)}
-                    className="px-2 py-1 underline"
-                  >
-                    빼기
-                  </button>
                 </div>
               </li>
             ))}
           </ul>
 
-          <section aria-label="주문 금액" className="space-y-3">
-            <dl className="space-y-2">
+          <section
+            aria-label="주문 금액"
+            className="border-ink bg-cloud sticky bottom-0 z-10 space-y-3 border-t-2 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:static sm:pb-8"
+          >
+            <dl className="space-y-1 tabular-nums">
               <div className="flex justify-between gap-2">
                 <dt>상품</dt>
                 <dd>{formatKRW(itemsKrw)}</dd>
@@ -175,7 +201,7 @@ export default function CartPage() {
                 <dt>배송비</dt>
                 <dd>{shippingKrw === 0 ? '무료' : formatKRW(shippingKrw)}</dd>
               </div>
-              <div className="flex justify-between gap-2 border-t border-gray-300 pt-2 font-semibold">
+              <div className="border-line flex justify-between gap-2 border-t pt-2 text-xl font-extrabold">
                 <dt>합계</dt>
                 <dd>{formatKRW(total)}</dd>
               </div>
@@ -183,13 +209,22 @@ export default function CartPage() {
             {untilFree > 0 && (
               <p>{formatKRW(untilFree)} 더 담으면 배송비가 무료입니다.</p>
             )}
-            <Link
-              href="/checkout"
-              className="block border border-gray-300 px-3 py-2 text-center"
-            >
-              주문하기
-            </Link>
-            <p>주문서에서 배송지를 입력받습니다.</p>
+            {ORDERING_OPEN ? (
+              <Link
+                href="/checkout"
+                className={button({ tone: 'primary', size: 'full' })}
+              >
+                {ORDER_LABEL}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className={button({ size: 'full' })}
+              >
+                {ORDER_LABEL}
+              </button>
+            )}
           </section>
         </>
       )}
