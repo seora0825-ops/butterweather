@@ -1,9 +1,11 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import SalesLog from '@/components/admin/SalesLog'
 import { useCounterSync } from '@/components/admin/useCounterSync'
+import { imageUrl } from '@/lib/images'
 import { PAYAPP_MIN_KRW, payappUrl, usesPayapp } from '@/lib/payapp'
 import { listProductDetails } from '@/lib/queries/adminProducts'
 import { saleStatus } from '@/lib/queries/counterSales'
@@ -109,6 +111,7 @@ export default function CounterPage() {
 
 function Picker() {
   const add = useCounter((s) => s.add)
+  const lines = useCounter((s) => s.lines)
   const [catalog, setCatalog] = useState<Catalog>({ state: 'loading' })
   const [revision, setRevision] = useState(0)
   const [amount, setAmount] = useState('')
@@ -170,8 +173,23 @@ function Picker() {
                             onClick={() =>
                               add({ key: v.id, name, priceKrw: v.price_krw })
                             }
+                            // 하나뿐인 것을 두 번 담지 않는다
+                            disabled={
+                              v.stock <= 1 && lines.some((l) => l.key === v.id)
+                            }
                             className={`${BUTTON} flex h-full w-full flex-col justify-between gap-2 text-left`}
                           >
+                            {p.images[0] ? (
+                              <span className="aspect-tile relative block w-full overflow-hidden">
+                                <Image
+                                  src={imageUrl(p.images[0])}
+                                  alt=""
+                                  fill
+                                  sizes="(min-width: 640px) 33vw, 50vw"
+                                  className="object-cover"
+                                />
+                              </span>
+                            ) : null}
                             <span className="wrap-anywhere">{name}</span>
                             <span className="tabular-nums">
                               {formatKRW(v.price_krw)}

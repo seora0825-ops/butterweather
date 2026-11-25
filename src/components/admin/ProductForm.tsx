@@ -50,6 +50,9 @@ const EMPTY_VARIANT: VariantDraft = {
   position: 0,
 }
 
+/** 손으로 만들어 같은 것이 없다. 새 상품은 **하나뿐인 것**으로 시작한다 */
+const ONE_OF_A_KIND: VariantDraft = { ...EMPTY_VARIANT, name: '기본', stock: 1 }
+
 function Field({
   id,
   label,
@@ -113,7 +116,7 @@ export default function ProductForm({
       price_krw: v.price_krw,
       stock: v.stock,
       position: v.position,
-    })) ?? [{ ...EMPTY_VARIANT }]
+    })) ?? [{ ...ONE_OF_A_KIND }]
   )
 
   const [uploadNote, setUploadNote] = useState<string | null>(null)
