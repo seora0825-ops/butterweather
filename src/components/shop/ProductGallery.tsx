@@ -50,7 +50,7 @@ export default function ProductGallery({
             <div
               key={src}
               className={cn(
-                'aspect-tile relative w-full shrink-0 snap-center lg:aspect-auto lg:min-h-136',
+                'aspect-tile relative w-full shrink-0 snap-center max-lg:max-h-[70dvh] lg:aspect-auto lg:min-h-136',
                 images.length > 1
                   ? 'lg:h-[calc(100dvh-12rem)]'
                   : 'lg:h-[calc(100dvh-4rem)]'
