@@ -1,5 +1,8 @@
 'use server'
 
+import { canOrder } from '@/lib/orderingAccess'
+import { isMobile } from '@/lib/payments/payapp'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { shippingFee } from '@/lib/shipping'
 import type { OrderLineInput, ShippingInfo } from '@/types/order'
@@ -17,6 +20,10 @@ import type { OrderLineInput, ShippingInfo } from '@/types/order'
  * 그래서 화면이 직접 넣게 두면 **손님이 값을 정하게 된다** — 11,900원짜리를
  * `price_krw: 100` 으로 보내면 그대로 들어간다. 장바구니가 브라우저에
  * 있으니 고치는 것도 쉽다.
+ *
+ * **쓰기는 `service_role` 로 한다 (2026-11-25).** 손님 권한으로 쓰면 손님에게
+ * insert 를 열어 둬야 하고, 그러면 **이 함수를 거치지 않고** 값도 상태도
+ * 마음대로 적은 주문을 넣을 수 있다 (`0011`).
  *
  * **화면은 「어느 옵션을 몇 개」만 보낸다.** 이름도 가격도 서버가 DB 에서
  * 다시 읽어 박제한다 (schema.md 7-3절).
@@ -45,6 +52,10 @@ export type CreateOrderResult =
       goneVariantIds?: string[]
     }
 
+function clean(value: unknown, max: number): string {
+  return typeof value === 'string' ? value.trim().slice(0, max) : ''
+}
+
 export async function createOrder(
   lines: OrderLineInput[],
   shipping: ShippingInfo,
@@ -66,6 +77,10 @@ export async function createOrder(
   }
 
   // ── 2. 보낸 것이 말이 되는가 ──────────────────────────────
+  if (!(await canOrder(supabase))) {
+    return { ok: false, reason: '온라인 주문은 준비 중입니다.' }
+  }
+
   if (lines.length === 0) {
     return { ok: false, reason: '담긴 것이 없습니다.' }
   }
@@ -78,10 +93,22 @@ export async function createOrder(
     return { ok: false, reason: '같은 옵션이 두 번 담겼습니다.' }
   }
 
-  const need =
-    shipping.name.trim() && shipping.phone.trim() && shipping.address.trim()
-  if (!need) {
+  // **아는 칸만, 정해진 길이로 옮긴다.** server action 의 인자는 손님이
+  // 마음대로 보낼 수 있다. 길이는 화면의 maxLength 와 같다
+  const info: ShippingInfo = {
+    name: clean(shipping.name, 40),
+    phone: clean(shipping.phone, 20),
+    zipcode: clean(shipping.zipcode, 10),
+    address: clean(shipping.address, 200),
+    addressDetail: clean(shipping.addressDetail, 100),
+    memo: clean(shipping.memo, 100),
+  }
+  if (!info.name || !info.phone || !info.address) {
     return { ok: false, reason: '받는 분·연락처·주소를 채워 주세요.' }
+  }
+  // 페이앱이 휴대폰 번호를 꼭 받는다. 유선번호로는 결제가 열리지 않는다
+  if (!isMobile(info.phone)) {
+    return { ok: false, reason: '휴대폰 번호를 확인해 주세요.' }
   }
 
   // ── 3. 값을 DB 에서 다시 읽는다 ★ ─────────────────────────
@@ -168,7 +195,8 @@ export async function createOrder(
   const total = itemsKrw + shippingKrw
 
   // ── 6. 넣는다 ─────────────────────────────────────────────
-  const { data: order, error: orderError } = await supabase
+  const admin = createAdminClient()
+  const { data: order, error: orderError } = await admin
     .from('orders')
     .insert({
       user_id: user.id,
@@ -177,11 +205,11 @@ export async function createOrder(
       shipping_fee_krw: shippingKrw,
       // 손님이 내는 총액이다. 상품 합계가 아니다
       total_krw: total,
-      shipping_info: shipping,
+      shipping_info: info,
       // 전자상거래법상 필수라 DB 가 `check (agree_privacy)` 로 막는다.
       // 여기까지 왔다는 것은 화면에서 체크했다는 뜻이다
       agree_privacy: true,
-      agree_marketing: agreeMarketing,
+      agree_marketing: agreeMarketing === true,
     })
     .select('id, order_no')
     .single()
@@ -193,7 +221,7 @@ export async function createOrder(
     }
   }
 
-  const { error: itemsError } = await supabase
+  const { error: itemsError } = await admin
     .from('order_items')
     .insert(items.map((i) => ({ ...i, order_id: order.id })))
 
@@ -201,7 +229,7 @@ export async function createOrder(
     // 줄 없는 영수증이 남으면 목록에서 0원짜리로 보인다. 되돌린다.
     // **트랜잭션이 아니라서 지우는 것도 실패할 수 있다** — 그때는 pending
     // 으로 남지만, 결제가 안 됐으므로 손님에게 청구되지 않는다
-    await supabase.from('orders').delete().eq('id', order.id)
+    await admin.from('orders').delete().eq('id', order.id)
     return {
       ok: false,
       reason: '주문서를 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.',
