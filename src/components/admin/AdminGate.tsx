@@ -132,6 +132,7 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
       <nav className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-gray-200 px-7 py-4 text-sm">
         <div className="flex items-center gap-6">
           <Link href="/admin/products">상품</Link>
+          <Link href="/admin/orders">주문</Link>
           <Link href="/admin/counter">현장 계산기</Link>
           <Link href="/">가게 화면 보기</Link>
         </div>
