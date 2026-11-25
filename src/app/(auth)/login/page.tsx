@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import LoginForm from './LoginForm'
 import { safeNext } from './safeNext'
 
@@ -30,9 +31,22 @@ export default async function LoginPage({
   const { next, error } = await searchParams
 
   return (
-    <main className="mx-auto max-w-sm px-7 py-20">
-      <h1 className="mb-2 text-xl">로그인</h1>
-      <LoginForm next={safeNext(next)} failed={error !== undefined} />
+    <main
+      id="main"
+      className="mx-auto max-w-2xl px-4 py-12 text-center text-base sm:py-20"
+    >
+      <Image
+        src="/illustrations/motif-tulip.svg"
+        alt=""
+        unoptimized
+        width={72}
+        height={86}
+        className="mx-auto mb-4 h-auto"
+      />
+      <h1 className="mb-2 text-2xl font-extrabold tracking-tight">로그인</h1>
+      <div className="mx-auto max-w-sm">
+        <LoginForm next={safeNext(next)} failed={error !== undefined} />
+      </div>
     </main>
   )
 }

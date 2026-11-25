@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { button } from '@/components/shop/button'
 import { createClient } from '@/lib/supabase/browser'
 import { useCart } from '@/lib/store/cart'
 
@@ -15,8 +16,7 @@ type ProviderId = (typeof PROVIDERS)[number]['id']
 const LOGIN_FAILED = '로그인을 완료하지 못했습니다. 아래에서 다시 골라 주세요.'
 const LOGOUT_FAILED = '로그아웃하지 못했습니다. 다시 눌러 주세요.'
 
-const BUTTON =
-  'w-full cursor-pointer border border-gray-300 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40'
+const BUTTON = button({ tone: 'outline', size: 'full' })
 
 export default function LoginForm({
   next,
@@ -107,7 +107,7 @@ export default function LoginForm({
   }
 
   const alert = error ? (
-    <p role="alert" className="mb-4 border border-gray-300 p-3 text-sm">
+    <p role="alert" className="border-line mb-4 border-t pt-3">
       {error}
     </p>
   ) : null
@@ -115,12 +115,12 @@ export default function LoginForm({
   if (name) {
     return (
       <>
-        <p className="mb-8 text-sm leading-relaxed">
+        <p className="mb-6 leading-relaxed wrap-anywhere">
           {`${name} 님으로 로그인되어 있습니다.`}
         </p>
         {error === LOGOUT_FAILED ? alert : null}
         <div className="flex flex-col gap-3">
-          <Link href={next} className={`${BUTTON} text-center`}>
+          <Link href={next} className={BUTTON}>
             계속 둘러보기
           </Link>
           <button
@@ -138,7 +138,7 @@ export default function LoginForm({
 
   return (
     <>
-      <p className="mb-8 text-sm leading-relaxed">
+      <p className="mb-6 leading-relaxed wrap-anywhere">
         따로 가입하실 것은 없습니다.
       </p>
       {alert}
