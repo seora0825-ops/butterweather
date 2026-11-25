@@ -1,1 +1,75 @@
 @import 'tailwindcss';
+
+/*
+ * 새 화면의 token. 값의 근거와 쓰는 법은 docs/design/shop.md.
+ *
+ * 색은 **이미 정해진 것만** 옮겼다(CLAUDE.md 4절) — butter · cloud · ink.
+ * 여기에 새 색을 더하려면 이나래에게 먼저 묻는다.
+ */
+@theme {
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+
+  --color-butter: #f5c842;
+  --color-butter-light: #fdf3c0;
+  --color-cloud: #f7f7f7;
+  --color-ink: #1a1a1a;
+  --color-ink-muted: #6b6b6b;
+  --color-line: #d9d9d9;
+
+  /* 이나래 일러스트 원본의 비율. 상품 사진도 같은 타일에 담는다 */
+  --aspect-tile: 234 / 279;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-cloud);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* 한국어는 낱말 중간에서 끊기면 읽기 나쁘다 */
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  /* Tailwind v4 preflight 는 button 에 cursor:pointer 를 주지 않는다 */
+  button:not(:disabled),
+  summary,
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--color-butter);
+    color: var(--color-ink);
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: var(--color-ink);
+    accent-color: var(--color-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

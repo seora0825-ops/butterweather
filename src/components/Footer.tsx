@@ -1,84 +1,51 @@
 import Link from 'next/link'
-import Label from '@/components/Label'
 import { BUSINESS, businessRows } from '@/lib/business'
+import { CATEGORIES } from '@/lib/categories'
 
 /**
- * ⚠️ **대부분의 link 는 아직 아무 데도 가지 않는다.** 화면이 생기는 대로
- * 잇는다. 갈 곳이 있는 것만 `HREFS` 에 적는다.
+ * **갈 곳이 있는 link 만 둔다.** 배송·교환 안내는 상품 상세 안에 있다.
+ * 사업자 정보 표기와 약관·방침 link 는 법이 요구한다 (lib/business.ts).
  */
-const FOOTER_COLS = [
-  { title: '상품', links: ['신상품', '키링', '팔찌', '목걸이'] },
-  { title: '주문', links: ['배송 안내', '교환·반품', '자주 묻는 질문'] },
-  {
-    title: '브랜드',
-    links: ['소개', 'Instagram', '네이버 스마트스토어', '문의'],
-  },
+const LINKS = [
+  ...CATEGORIES.map((c) => ({ label: c.label, href: `/category/${c.id}` })),
+  { label: '주문 내역', href: '/orders' },
+  { label: 'Instagram', href: 'https://www.instagram.com/butterweather_/' },
+  { label: '문의', href: `mailto:${BUSINESS.email}` },
+  { label: '이용약관', href: '/terms' },
+  { label: '개인정보처리방침', href: '/privacy' },
 ]
-
-/** 갈 곳이 생긴 것만. 나머지는 `#` 이다 */
-const HREFS: Record<string, string> = {
-  문의: `mailto:${BUSINESS.email}`,
-}
 
 export default function Footer() {
   const rows = businessRows()
 
   return (
-    <footer>
-      <div className="grid grid-cols-1 border-t border-gray-200 sm:grid-cols-3">
-        {FOOTER_COLS.map((col) => (
-          <div
-            key={col.title}
-            className="border-b border-gray-200 p-7 sm:border-r sm:border-b-0 sm:last:border-r-0"
-          >
-            <Label className="mb-4">{col.title}</Label>
-            <ul className="flex flex-col gap-2">
-              {col.links.map((l) => (
-                <li key={l}>
-                  <a href={HREFS[l] ?? '#'} className="text-base">
-                    {l}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <footer className="border-ink mt-20 border-t-2 px-4 pt-10 pb-12 md:px-6">
+      <p className="text-xl font-extrabold tracking-tight text-balance md:text-2xl">
+        나의 하루에 부드럽게 스며드는 작은 온기
+      </p>
+      <ul className="mt-6 -ml-2 flex flex-wrap">
+        {LINKS.map((l) => (
+          <li key={l.href}>
+            <Link
+              href={l.href}
+              className="flex min-h-11 items-center px-2 text-[15px] font-semibold hover:underline hover:decoration-2 hover:underline-offset-4"
+            >
+              {l.label}
+            </Link>
+          </li>
         ))}
-      </div>
-
-      {/* ── 사업자 정보 ──────────────────────────────────────
-          **전자상거래법이 요구하는 표기다.** 결제 심사도 여기를 본다
-          (lib/business.ts). 비어 있으면 통째로 그리지 않는다 — 빈 값에
-          라벨만 띄우면 「상호: 」 같은 것이 손님에게 보인다 */}
-      {rows.length > 0 ? (
-        <div className="border-t border-gray-200 px-7 py-5">
-          <dl className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-            {rows.map(([k, v]) => (
-              <div key={k} className="flex gap-1.5">
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 px-7 py-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <p className="text-sm">© 2026 Butter Weather</p>
-          {/* **공개가 의무다** (개인정보보호법 제30조). 찾을 수 있는
-              자리에 둔다 — 위 열을 늘리면 grid-cols-3 이 깨진다 */}
-          <Link href="/terms" className="text-sm underline">
-            이용약관
-          </Link>
-          <Link href="/privacy" className="text-sm underline">
-            개인정보처리방침
-          </Link>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="text-sm">KR</span>
-          <span className="text-sm">EN</span>
-        </div>
-      </div>
+      </ul>
+      {rows.length > 0 && (
+        <dl className="text-ink-muted mt-6 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex gap-1.5">
+              <dt className="shrink-0">{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="text-ink-muted mt-4 text-sm">© 2026 Butter Weather</p>
     </footer>
   )
 }
