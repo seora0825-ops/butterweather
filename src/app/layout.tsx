@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Footer from '@/components/Footer'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -8,22 +7,22 @@ export const metadata: Metadata = {
 }
 
 /**
- * 화면을 새로 짓기 전의 최소본이다.
- *
- * 옛 저장소(`jerryko570/global-butter-weather`)의 layout 은 font·다크모드
- * 스크립트·사이드바 구조를 들고 있었다. 디자인을 새로 정하므로 **가져오지
- * 않았다.** 필요해지면 그쪽 `src/app/layout.tsx` 의 주석을 먼저 읽는다 —
- * 다크모드 깜빡임과 font 서브셋을 왜 그렇게 했는지가 거기 있다.
+ * 모든 화면의 껍데기. **Header·Footer 는 여기 없다** — 손님 화면
+ * (`(shop)`·`(auth)`)의 layout 이 각각 붙인다. 어드민에는 필요 없다.
  */
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body className="min-h-dvh antialiased">
-        {children}
-        <Footer />
-      </body>
+      <head>
+        {/* 동적 서브셋이라 쓰인 글자의 조각만 받는다. next/font/local 은
+            unicode-range 를 지원하지 않아 쓸 수 없다
+            (public/fonts/pretendard/README.md) */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link rel="stylesheet" href="/fonts/pretendard/pretendard.css" />
+      </head>
+      <body className="min-h-dvh antialiased">{children}</body>
     </html>
   )
 }
