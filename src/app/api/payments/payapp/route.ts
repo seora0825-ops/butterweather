@@ -1,3 +1,5 @@
+import { after } from 'next/server'
+import { sendOrderMail } from '@/lib/notify/orderMail'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyPaidError } from '@/lib/payments/complete'
 import { isGenuineFeedback, refundPayment } from '@/lib/payments/payapp'
@@ -99,7 +101,11 @@ export async function POST(req: Request) {
         p_provider: 'payapp',
         p_payment_id: mulNo,
       })
-      if (!error) return success(`결제 완료 (${order.order_no})`)
+      if (!error) {
+        // 응답을 먼저 보낸다. 메일이 느려도 페이앱이 기다리지 않는다
+        after(() => sendOrderMail(order.id, 'paid'))
+        return success(`결제 완료 (${order.order_no})`)
+      }
 
       const failure = classifyPaidError(error.message ?? '')
       if (failure.kind === 'stock') {
@@ -109,6 +115,7 @@ export async function POST(req: Request) {
             p_order_id: order.id,
             p_reason: `${failure.detail} 품절`,
           })
+          after(() => sendOrderMail(order.id, 'cancelled'))
         }
         return response
       }
@@ -140,7 +147,13 @@ export async function POST(req: Request) {
       p_order_id: order.id,
       p_reason: '결제 취소',
     })
-    if (!error) return success(`취소 반영 (${order.order_no})`)
+    if (!error) {
+      // `paid` 였을 때만 손님이 낸 돈이 있다
+      if (order.status === 'paid') {
+        after(() => sendOrderMail(order.id, 'cancelled'))
+      }
+      return success(`취소 반영 (${order.order_no})`)
+    }
     // 보낸 뒤의 취소는 반품이라 사람이 정리한다. 다시 받아도 같다
     if (error.message.includes('ORDER_ALREADY_SHIPPED')) {
       return success(`보낸 주문이 취소됨 (${order.order_no})`, 'error')

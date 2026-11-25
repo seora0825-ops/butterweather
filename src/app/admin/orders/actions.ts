@@ -1,6 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
+import { sendOrderMail } from '@/lib/notify/orderMail'
 import { refundPayment } from '@/lib/payments/payapp'
 import { cancelPayment } from '@/lib/payments/portone'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -96,6 +98,10 @@ export async function cancelOrder(
     }
   }
 
+  if (order.status === 'paid') {
+    after(() => sendOrderMail(order.id, 'cancelled'))
+  }
+
   revalidatePath('/admin/orders')
   revalidatePath(`/admin/orders/${orderNo}`)
   // 재고가 돌아왔으므로 가게 화면도 다시 굽는다
@@ -149,6 +155,7 @@ export async function markShipped(
       reason: '결제 완료된 주문만 보낼 수 있습니다. 상태를 확인해 주세요.',
     }
   }
+  after(() => sendOrderMail(updated[0].id, 'shipped'))
 
   revalidatePath('/admin/orders')
   revalidatePath(`/admin/orders/${orderNo}`)
@@ -179,6 +186,7 @@ export async function markDone(orderNo: string): Promise<CancelOrderResult> {
   if (!updated || updated.length === 0) {
     return { ok: false, reason: '배송 중인 주문만 완료로 바꿀 수 있습니다.' }
   }
+  after(() => sendOrderMail(updated[0].id, 'done'))
 
   revalidatePath('/admin/orders')
   revalidatePath(`/admin/orders/${orderNo}`)
