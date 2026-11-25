@@ -38,6 +38,8 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
   // 조용히 줄이는데, 그러면 「담았습니다」가 틀린 말이 된다
   const inCart = lines.find((l) => l.variantId === variant?.id)?.quantity ?? 0
   const room = variant ? Math.max(0, variant.stock - inCart) : 0
+  /** 옵션도 재고도 하나. 수량을 고를 것이 없다 */
+  const onlyOne = single && variants[0].stock === 1
   const full = variant !== null && available(variant.stock) && room === 0
 
   function pick(id: string) {
@@ -78,7 +80,9 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
     : !variant
       ? '옵션 고르기'
       : full
-        ? '재고를 모두 담았습니다'
+        ? onlyOne
+          ? '장바구니에 있습니다'
+          : '재고를 모두 담았습니다'
         : '장바구니 담기'
 
   return (
@@ -118,7 +122,13 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
         </fieldset>
       )}
 
-      {variant && available(variant.stock) && (
+      {onlyOne && available(1) && (
+        <p className="mt-6 text-[15px] font-semibold">
+          손으로 만든 단 하나입니다.
+        </p>
+      )}
+
+      {variant && !onlyOne && available(variant.stock) && (
         <div className="mt-6 flex items-center gap-4">
           <QuantityStepper
             value={quantity}

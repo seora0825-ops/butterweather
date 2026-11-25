@@ -179,15 +179,17 @@ export default function CartPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <QuantityStepper
-                      value={line.quantity}
-                      min={1}
-                      max={line.stock}
-                      label={line.productName}
-                      onChange={(quantity) =>
-                        setQuantity(line.variantId, quantity)
-                      }
-                    />
+                    {line.stock > 1 && (
+                      <QuantityStepper
+                        value={line.quantity}
+                        min={1}
+                        max={line.stock}
+                        label={line.productName}
+                        onChange={(quantity) =>
+                          setQuantity(line.variantId, quantity)
+                        }
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => removeLines([line])}

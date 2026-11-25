@@ -52,12 +52,20 @@ export default function AdminProductsPage() {
           <h1 className="font-semibold">상품</h1>
           {list.state === 'ready' && <p>{list.products.length}개</p>}
         </div>
-        <Link
-          href="/admin/products/new"
-          className="border border-gray-300 px-3 py-2"
-        >
-          상품 등록하기
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/products/bulk"
+            className="border border-gray-300 px-3 py-2"
+          >
+            사진으로 한 번에 등록
+          </Link>
+          <Link
+            href="/admin/products/new"
+            className="border border-gray-300 px-3 py-2"
+          >
+            상품 등록하기
+          </Link>
+        </div>
       </div>
 
       <Suspense>
