@@ -27,21 +27,29 @@ export default async function CategoryPage({ params }: Props) {
 
   return (
     <main id="main">
-      <h1 className="sr-only">{category.label}</h1>
-      <div className="border-ink relative h-24 overflow-hidden border-b-2 md:h-40">
-        <Image
-          src={category.pattern}
-          alt=""
-          fill
-          unoptimized
-          priority
-          className="scale-[1.03] object-cover"
-        />
+      <div className="border-ink grid grid-cols-2 border-b-2">
+        <div
+          className={`${category.board} flex h-28 items-end p-4 md:h-48 md:p-6`}
+        >
+          <h1 className="text-4xl leading-none font-extrabold tracking-tight text-white md:text-7xl">
+            {category.label}
+          </h1>
+        </div>
+        <div className="relative overflow-hidden">
+          <Image
+            src={category.pattern}
+            alt=""
+            fill
+            unoptimized
+            priority
+            className="scale-[1.03] object-cover"
+          />
+        </div>
       </div>
       <ProductWall
-        title={category.label}
+        title="전체"
         products={products}
-        art={[category.motif]}
+        art={['/illustrations/figma/watering-can-yellow.svg']}
       />
     </main>
   )
