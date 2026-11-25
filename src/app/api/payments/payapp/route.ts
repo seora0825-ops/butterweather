@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
 import { sendOrderMail } from '@/lib/notify/orderMail'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -75,9 +76,10 @@ export async function POST(req: Request) {
   // 받은 결제가 그리로 온다 — 홈페이지 주문이 아니면 현장 장부에 적는다
   async function counter(): Promise<Response> {
     const problem = await recordCounterPayment(admin, form)
-    return problem
-      ? again(`현장 결제를 적지 못함: ${problem}`)
-      : success(`현장 결제 ${state}`)
+    if (problem) return again(`현장 결제를 적지 못함: ${problem}`)
+    // 통보가 판매를 확정하면 재고가 준다(`0013`)
+    revalidatePath('/', 'layout')
+    return success(`현장 결제 ${state}`)
   }
 
   if (!mulNo || !/^[0-9a-f-]{36}$/i.test(orderId)) return counter()
