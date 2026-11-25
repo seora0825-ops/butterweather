@@ -73,7 +73,7 @@ export function privacyOfficer(): { name: string; email: string } {
  * 개인정보처리방침 시행일. **내용을 고치면 이 날짜도 고친다** —
  * 언제부터의 방침인지가 방침의 일부다.
  */
-export const PRIVACY_EFFECTIVE_DATE = '2026-10-25'
+export const PRIVACY_EFFECTIVE_DATE = '2026-11-25'
 
 /**
  * 이용약관 시행일. **방침과 따로 둔다** — 둘은 다른 문서이고 각각

@@ -443,7 +443,7 @@ feat: 상품 목록 추가          ← 이모지 없이도 통과
 
 |      |                                                                                                                                                    |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 발신 | `버터웨더 <noreply@butterweather.com>` · 지역 도쿄(`ap-northeast-1`)                                                                               |
+| 발신 | `버터웨더 <noreply@butterweather.com>` · 지역 도쿄(`ap-northeast-1`) — **발송 경로일 뿐이고 저장은 미국(30일)이다**                                |
 | DNS  | Resend 가 Vercel DNS 에 직접 넣었다(Domain Connect) — `send`·`rsend` CNAME, `resend._domainkey` TXT. `_dmarc` 는 손으로 넣었다(`v=DMARC1; p=none`) |
 | 확인 | 2026-11-22 시험 메일이 Gmail **받은편지함**에 왔다. SPF·DKIM·DMARC 모두 PASS                                                                       |
 | 키   | `.env.local` 의 `RESEND_API_KEY` 는 **발송 전용**이다 — 도메인 설정은 못 바꾼다. 새도 피해가 작다                                                  |
