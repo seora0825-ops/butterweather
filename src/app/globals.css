@@ -31,6 +31,11 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 손글씨 — 번호·짧은 메모에만 (lib/fonts.ts). 변수가 body 에 붙어 inline 으로 둔다 */
+@theme inline {
+  --font-hand: var(--font-hand-latin), var(--font-hand-kr), cursive;
+}
+
 @layer base {
   html {
     color-scheme: light;

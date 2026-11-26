@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { handKr, handLatin } from '@/lib/fonts'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -22,7 +23,11 @@ export default function RootLayout({
         {/* eslint-disable-next-line @next/next/no-css-tags */}
         <link rel="stylesheet" href="/fonts/pretendard/pretendard.css" />
       </head>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body
+        className={`${handLatin.variable} ${handKr.variable} min-h-dvh antialiased`}
+      >
+        {children}
+      </body>
     </html>
   )
 }
