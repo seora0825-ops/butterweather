@@ -7,9 +7,10 @@ import ProductBuy from '@/components/shop/ProductBuy'
 import ProductGallery from '@/components/shop/ProductGallery'
 import ProductTile from '@/components/shop/ProductTile'
 import ShippingGuide from '@/components/shop/ShippingGuide'
+import SizeRuler from '@/components/shop/SizeRuler'
 import { findCategory } from '@/lib/categories'
 import { imageUrl } from '@/lib/images'
-import { numberOf } from '@/lib/productTags'
+import { lengthOf, numberOf } from '@/lib/productTags'
 import {
   formatKRW,
   getProductBySlug,
@@ -49,6 +50,7 @@ export default async function ProductPage({ params }: Props) {
 
   const category = findCategory(product.category)
   const no = numberOf(product.tags)
+  const length = lengthOf(product.tags)
   const prices = product.variants.map((v) => v.price_krw)
   const min = Math.min(...prices)
   const varied = Math.max(...prices) !== min
@@ -92,6 +94,8 @@ export default async function ProductPage({ params }: Props) {
               {product.description}
             </p>
           )}
+
+          {length && <SizeRuler cm={length} />}
 
           <ProductBuy product={product} />
           <ShippingGuide />
