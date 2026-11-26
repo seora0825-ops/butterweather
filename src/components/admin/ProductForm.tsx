@@ -12,7 +12,14 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ImageField from '@/components/admin/ImageField'
 import { LIMITS, validateProduct } from '@/lib/productLimits'
-import { numberOf, TODAY_TAG, withNumber, withToday } from '@/lib/productTags'
+import {
+  TODAY_TAG,
+  lengthOf,
+  numberOf,
+  withLength,
+  withNumber,
+  withToday,
+} from '@/lib/productTags'
 import {
   clearOtherTodayProducts,
   createProduct,
@@ -121,6 +128,9 @@ export default function ProductForm({
     initial?.tags?.includes(TODAY_TAG) ?? false
   )
   const numberRef = useRef<HTMLInputElement>(null)
+  const [length, setLength] = useState(
+    lengthOf(initial?.tags)?.toString() ?? ''
+  )
   const [isActive, setIsActive] = useState(initial?.is_active ?? false)
   const [status, setStatus] = useState<ProductStatus>(
     initial?.status ?? 'active'
@@ -171,6 +181,11 @@ export default function ProductForm({
       setError('번호는 1부터 999까지의 정수로 입력해 주세요.')
       return
     }
+    const cm = length === '' ? null : Number(length)
+    if (cm !== null && (!Number.isFinite(cm) || cm <= 0 || cm > 200)) {
+      setError('둘레는 cm 로, 0보다 크고 200 이하로 입력해 주세요.')
+      return
+    }
 
     const values: VariantInput[] = variants.map((variant) => ({
       ...variant,
@@ -214,7 +229,10 @@ export default function ProductForm({
         description: description.trim() || null,
         description_en: initial?.description_en ?? null,
         category,
-        tags: withToday(withNumber(current?.tags ?? initial?.tags, no), today),
+        tags: withLength(
+          withToday(withNumber(current?.tags ?? initial?.tags, no), today),
+          cm
+        ),
         images,
         detail_images: initial?.detail_images ?? [],
         status,
@@ -456,6 +474,22 @@ export default function ProductForm({
               max={999}
               value={number}
               onChange={(e) => setNumber(e.target.value)}
+            />
+          </Field>
+          <Field
+            id="product-length"
+            label="둘레(cm)"
+            hint="한 바퀴 길이. 상세에 자로 나옵니다. 0.5cm 단위."
+          >
+            <TextField
+              id="product-length"
+              type="number"
+              inputMode="decimal"
+              min={0.5}
+              max={200}
+              step={0.5}
+              value={length}
+              onChange={(e) => setLength(e.target.value)}
             />
           </Field>
           <div>
