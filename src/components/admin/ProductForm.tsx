@@ -1,5 +1,13 @@
 'use client'
 
+import {
+  Button,
+  Checkbox,
+  Notice,
+  Select,
+  TextArea,
+  TextField,
+} from '@/components/admin/ui'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ImageField from '@/components/admin/ImageField'
@@ -52,7 +60,8 @@ const EMPTY_VARIANT: VariantDraft = {
 }
 
 /** 손으로 만들어 같은 것이 없다. 새 상품은 **하나뿐인 것**으로 시작한다 */
-const ONE_OF_A_KIND: VariantDraft = { ...EMPTY_VARIANT, name: '기본', stock: 1 }
+// 디자인마다 다섯 개쯤 만든다(2026-11-26). 한 점뿐이면 1로 고친다
+const ONE_OF_A_KIND: VariantDraft = { ...EMPTY_VARIANT, name: '기본', stock: 5 }
 
 function Field({
   id,
@@ -67,11 +76,11 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block">
+      <label htmlFor={id} className="mb-2 block font-medium">
         {label}
       </label>
       {children}
-      {hint ? <p className="mt-1 text-sm">{hint}</p> : null}
+      {hint ? <p className="text-ink-muted mt-1 text-xs">{hint}</p> : null}
     </div>
   )
 }
@@ -85,8 +94,6 @@ function saveError(err: unknown): string {
   }
   return '상품 저장을 완료하지 못했습니다. 입력값과 관리자 계정을 확인한 뒤 다시 시도해 주세요.'
 }
-
-const inputClass = 'w-full min-w-0 border border-gray-300 px-3 py-2 text-sm'
 
 export default function ProductForm({
   initial,
@@ -199,7 +206,7 @@ export default function ProductForm({
     }
 
     // 가게 화면은 60초 주기로 굽는다. 바꾼 즉시 보이도록 깨운다.
-    let destination = '/admin/products'
+    let destination = '/admin/products?shop-refresh=saved'
     try {
       await revalidateShop()
     } catch {
@@ -210,12 +217,14 @@ export default function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      <fieldset disabled={saving} className="flex min-w-0 flex-col gap-6">
+      <fieldset
+        disabled={saving}
+        className="border-line flex min-w-0 flex-col gap-6 rounded-md border bg-white p-4 sm:p-6"
+      >
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <Field id="product-name" label="이름 (국문) *">
-            <input
+            <TextField
               id="product-name"
-              className={inputClass}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={LIMITS.name.max}
@@ -223,9 +232,8 @@ export default function ProductForm({
             />
           </Field>
           <Field id="product-name-en" label="이름 (영문)">
-            <input
+            <TextField
               id="product-name-en"
-              className={inputClass}
               value={nameEn}
               onChange={(e) => setNameEn(e.target.value)}
               maxLength={LIMITS.nameEn.max}
@@ -242,9 +250,8 @@ export default function ProductForm({
               : '주소와 사진 폴더 이름이 됩니다. 영문 소문자·숫자·하이픈을 입력해 주세요.'
           }
         >
-          <input
+          <TextField
             id="product-slug"
-            className={inputClass}
             value={slug}
             readOnly={editing || uploading}
             onChange={(e) => setSlug(e.target.value)}
@@ -259,9 +266,8 @@ export default function ProductForm({
           label="카테고리 *"
           hint="소재가 아니라 형태로 나눕니다."
         >
-          <select
+          <Select
             id="product-category"
-            className={inputClass}
             value={category}
             onChange={(e) => setCategory(e.target.value as ProductCategory)}
           >
@@ -270,13 +276,12 @@ export default function ProductForm({
                 {c.label}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field id="product-description" label="설명">
-          <textarea
+          <TextArea
             id="product-description"
-            className={`${inputClass} min-h-24`}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={LIMITS.description.max}
@@ -294,35 +299,26 @@ export default function ProductForm({
           onUploadingChange={updateUploading}
           disabled={saving}
         />
-        {uploadNote ? (
-          <p role="status" className="wrap-anywhere">
-            {uploadNote}
-          </p>
-        ) : null}
+        {uploadNote ? <Notice tone="success">{uploadNote}</Notice> : null}
 
-        {uploadError && (
-          <p role="alert" className="wrap-anywhere whitespace-pre-line">
-            {uploadError}
-          </p>
-        )}
+        {uploadError && <Notice tone="error">{uploadError}</Notice>}
 
         {/* ───── 옵션 ───── */}
         <fieldset className="min-w-0">
-          <legend className="mb-2">옵션</legend>
-          <p className="mb-3">
+          <legend className="mb-2 text-base font-semibold">옵션</legend>
+          <p className="text-ink-muted mb-3">
             옵션마다 가격과 재고를 입력해 주세요. 옵션은 한 개 이상 필요합니다.
           </p>
           <div className="flex flex-col gap-3">
             {variants.map((v, i) => (
               <fieldset
                 key={v.id ?? `new-${i}`}
-                className="grid min-w-0 grid-cols-1 items-end gap-2 border border-gray-300 p-3 min-[360px]:grid-cols-2 sm:grid-cols-4"
+                className="border-line bg-cloud grid min-w-0 grid-cols-1 items-end gap-2 rounded-md border p-3 min-[360px]:grid-cols-2 sm:grid-cols-4"
               >
                 <legend>옵션 {i + 1}</legend>
                 <label className="grid min-w-0 gap-1">
                   이름 *
-                  <input
-                    className={inputClass}
+                  <TextField
                     maxLength={LIMITS.variantName.max}
                     value={v.name}
                     onChange={(e) => setVariant(i, { name: e.target.value })}
@@ -330,8 +326,7 @@ export default function ProductForm({
                 </label>
                 <label className="grid min-w-0 gap-1">
                   영문 이름
-                  <input
-                    className={inputClass}
+                  <TextField
                     maxLength={LIMITS.variantNameEn.max}
                     value={v.name_en ?? ''}
                     onChange={(e) => setVariant(i, { name_en: e.target.value })}
@@ -339,8 +334,7 @@ export default function ProductForm({
                 </label>
                 <label className="grid min-w-0 gap-1">
                   가격 (원)
-                  <input
-                    className={inputClass}
+                  <TextField
                     type="number"
                     min={LIMITS.priceKrw.min}
                     max={LIMITS.priceKrw.max}
@@ -355,8 +349,7 @@ export default function ProductForm({
                 </label>
                 <label className="grid min-w-0 gap-1">
                   재고
-                  <input
-                    className={inputClass}
+                  <TextField
                     type="number"
                     min={LIMITS.stock.min}
                     max={LIMITS.stock.max}
@@ -369,19 +362,20 @@ export default function ProductForm({
                     }
                   />
                 </label>
-                <button
+                <Button
                   type="button"
                   onClick={() =>
                     setVariants((vs) => vs.filter((_, j) => j !== i))
                   }
                   disabled={variants.length === 1}
-                  className="w-fit border border-gray-300 px-3 py-2 disabled:opacity-40"
+                  variant="danger"
+                  className="w-fit"
                 >
                   빼기
-                </button>
+                </Button>
               </fieldset>
             ))}
-            <button
+            <Button
               type="button"
               onClick={() =>
                 setVariants((vs) => [
@@ -390,65 +384,52 @@ export default function ProductForm({
                 ])
               }
               disabled={variants.length >= LIMITS.variants.max}
-              className="w-fit border border-dashed border-gray-300 px-3 py-2 disabled:opacity-40"
+              className="w-fit"
             >
               옵션 추가하기
-            </button>
+            </Button>
           </div>
         </fieldset>
 
         <Field id="product-status" label="판매 상태">
-          <select
+          <Select
             id="product-status"
-            className={inputClass}
             value={status}
             onChange={(e) => setStatus(e.target.value as ProductStatus)}
           >
             <option value="active">판매 중</option>
             <option value="sold_out">품절</option>
-          </select>
+          </Select>
         </Field>
 
         <div>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
+          <label className="flex min-h-11 items-center gap-2 font-medium">
+            <Checkbox
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
             />
             가게에 보이기
           </label>
-          <p className="mt-1">
+          <p className="text-ink-muted mt-1 text-xs">
             끄면 상품 주소로 들어와도 가게에서 볼 수 없습니다.
           </p>
         </div>
       </fieldset>
 
-      {error ? (
-        <p
-          role="alert"
-          className="border border-gray-300 p-3 wrap-anywhere whitespace-pre-line"
-        >
-          {error}
-        </p>
-      ) : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
 
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={saving || uploading}
-          className="border border-gray-300 px-3 py-2 disabled:opacity-40"
-        >
-          {saving ? '저장 중…' : editing ? '저장하기' : '등록하기'}
-        </button>
-        <button
+      {saving && <Notice>상품을 저장하는 중입니다.</Notice>}
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" variant="primary" disabled={saving || uploading}>
+          {saving ? '저장 중…' : editing ? '변경사항 저장' : '상품 등록'}
+        </Button>
+        <Button
           type="button"
           onClick={() => router.push('/admin/products')}
           disabled={saving || uploading}
-          className="border border-gray-300 px-3 py-2 disabled:opacity-40"
         >
           취소하기
-        </button>
+        </Button>
       </div>
     </form>
   )

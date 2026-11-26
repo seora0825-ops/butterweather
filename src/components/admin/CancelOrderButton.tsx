@@ -1,3 +1,4 @@
+import { Button, TextArea } from '@/components/admin/ui'
 import { useState } from 'react'
 import { cancelOrder, type CancelOrderResult } from '@/app/admin/orders/actions'
 import { krw } from '@/lib/orders'
@@ -22,20 +23,20 @@ export default function CancelOrderButton({
 
   if (!confirming) {
     return (
-      <button
+      <Button
         type="button"
         disabled={busy}
-        className="underline disabled:opacity-40"
+        variant="ghost"
         onClick={() => setConfirming(true)}
       >
-        주문 취소하기
-      </button>
+        주문 취소
+      </Button>
     )
   }
 
   return (
     <form
-      className="space-y-3 border border-gray-300 p-3"
+      className="border-line bg-cloud space-y-3 rounded-md border p-4"
       onSubmit={(event) => {
         event.preventDefault()
         if (!reason.trim()) return
@@ -62,37 +63,36 @@ export default function CancelOrderButton({
           ? '결제를 취소하고 재고를 되돌립니다.'
           : '결제된 적이 없는 주문입니다. 주문을 취소합니다.'}
       </p>
-      <label className="flex flex-col gap-1">
+      <label className="flex min-w-0 flex-col gap-1 font-medium">
         취소 사유
-        <textarea
+        <TextArea
           required
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           disabled={busy}
-          className="w-full border border-gray-300 px-3 py-2"
         />
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="submit"
+          variant="danger"
           disabled={busy || !reason.trim()}
-          className="border border-gray-300 px-3 py-2 disabled:opacity-40"
         >
           {status === 'paid'
             ? '확인하고 결제 취소하기'
             : '확인하고 주문 취소하기'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={busy}
-          className="underline disabled:opacity-40"
+          variant="ghost"
           onClick={() => {
             setConfirming(false)
             setReason('')
           }}
         >
           돌아가기
-        </button>
+        </Button>
       </div>
     </form>
   )

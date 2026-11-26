@@ -2,9 +2,21 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import DeleteProductButton from '@/components/admin/DeleteProductButton'
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  EmptyState,
+  FilterBar,
+  Notice,
+  PageHeader,
+  Select,
+  Table,
+  TextField,
+  numericCell,
+} from '@/components/admin/ui'
 import { useListFilters } from '@/components/admin/useListFilters'
 import { imageUrl } from '@/lib/images'
 import { listProductDetails } from '@/lib/queries/adminProducts'
@@ -23,12 +35,12 @@ const COLUMNS = [
   '사진',
   '이름',
   '카테고리',
-  '가격',
-  '재고',
+  { label: '가격', numeric: true },
+  { label: '재고', numeric: true },
   '상태',
   '노출',
   '관리',
-]
+] as const
 const FILTER_OPTIONS = {
   category: { '': '전체', ...CATEGORY_LABELS },
   visibility: { '': '전체', shown: '보임', hidden: '감춤' },
@@ -41,7 +53,6 @@ const FILTER_FIELDS = [
   ['stock', '재고'],
   ['sort', '정렬'],
 ] as const
-const FIELD = 'w-full min-w-0 border border-gray-300 px-3 py-2'
 
 type ProductRow = ProductDetail & { stock: number; minPrice: number | null }
 type ProductList =
@@ -61,7 +72,7 @@ function toRow(product: ProductDetail): ProductRow {
 /** 브라우저가 세션을 갱신하고, 감춘 상품의 조회 범위는 RLS가 정한다. */
 export default function AdminProductsPage() {
   return (
-    <Suspense fallback={<p role="status">상품을 불러오는 중입니다.</p>}>
+    <Suspense fallback={<Notice>상품을 불러오는 중입니다.</Notice>}>
       <ProductList />
     </Suspense>
   )
@@ -70,7 +81,9 @@ export default function AdminProductsPage() {
 function ProductList() {
   const [list, setList] = useState<ProductList>({ state: 'loading' })
   const [revision, setRevision] = useState(0)
-  const [deleteRefreshFailed, setDeleteRefreshFailed] = useState(false)
+  const [deleteResult, setDeleteResult] = useState<
+    'success' | 'refresh-failed' | null
+  >(null)
 
   useEffect(() => {
     let alive = true
@@ -125,39 +138,28 @@ function ProductList() {
 
   return (
     <div className="flex flex-col gap-6 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-semibold">상품 목록</h1>
-          {list.state === 'ready' && <p>{visible.length}개</p>}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/admin/products/bulk"
-            className="border border-gray-300 px-3 py-2"
-          >
-            한 번에 등록
-          </Link>
-          <Link
-            href="/admin/products/new"
-            className="border border-gray-300 px-3 py-2"
-          >
-            새 상품
-          </Link>
-        </div>
-      </div>
-
-      <div
-        role="group"
-        aria-label="상품 검색과 필터"
-        className="grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]"
+      <PageHeader
+        title="상품 목록"
+        count={list.state === 'ready' ? `${visible.length}개` : undefined}
+        actions={
+          <>
+            <ButtonLink href="/admin/products/bulk">한 번에 등록</ButtonLink>
+            <ButtonLink href="/admin/products/new" variant="primary">
+              상품 추가
+            </ButtonLink>
+          </>
+        }
+      />
+      <FilterBar
+        label="상품 검색과 필터"
+        className="grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]"
       >
         <label className="col-span-2 space-y-1 lg:col-span-1">
           <span>이름 검색</span>
-          <input
+          <TextField
             type="search"
             value={search}
             onChange={(event) => setFilters({ q: event.target.value })}
-            className={FIELD}
           />
         </label>
         {FILTER_FIELDS.map(([key, label]) => {
@@ -166,8 +168,7 @@ function ProductList() {
           return (
             <label key={key} className="space-y-1">
               <span>{label}</span>
-              <select
-                className={FIELD}
+              <Select
                 value={Object.hasOwn(options, value) ? value : ''}
                 onChange={(event) => setFilters({ [key]: event.target.value })}
               >
@@ -176,143 +177,147 @@ function ProductList() {
                     {name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )
         })}
-      </div>
+      </FilterBar>
 
       <SaveNotice />
-      {deleteRefreshFailed && (
-        <p role="status">
-          상품을 지웠습니다. 가게에 반영되기까지 잠시 기다려 주세요.
-        </p>
+      {deleteResult && (
+        <Notice tone="success">
+          상품을 지웠습니다.
+          {deleteResult === 'refresh-failed' &&
+            ' 가게에 반영되기까지 잠시 기다려 주세요.'}
+        </Notice>
       )}
-      {list.state === 'loading' && (
-        <p role="status">상품을 불러오는 중입니다.</p>
-      )}
+      {list.state === 'loading' && <Notice>상품을 불러오는 중입니다.</Notice>}
       {list.state === 'error' && (
-        <div>
-          <p role="alert">상품을 불러오지 못했습니다. 다시 불러와 주세요.</p>
-          <button type="button" onClick={reload} className="underline">
-            다시 불러오기
-          </button>
+        <div className="space-y-2">
+          <Notice tone="error">
+            상품을 불러오지 못했습니다. 다시 불러와 주세요.
+          </Notice>
+          <Button onClick={reload}>다시 불러오기</Button>
         </div>
       )}
       {list.state === 'ready' &&
         (visible.length === 0 ? (
-          <div className="space-y-2">
-            <p>조건에 맞는 상품이 없습니다</p>
-            <button
-              type="button"
-              className="underline"
-              onClick={() =>
-                setFilters({
-                  q: '',
-                  category: '',
-                  visibility: '',
-                  stock: '',
-                  sort: '',
-                })
-              }
-            >
-              필터 초기화
-            </button>
-          </div>
-        ) : (
-          <table
-            role="table"
-            aria-label="상품 목록"
-            className="block w-full text-left lg:table"
+          <EmptyState
+            action={
+              list.products.length > 0 && (
+                <Button
+                  onClick={() =>
+                    setFilters({
+                      q: '',
+                      category: '',
+                      visibility: '',
+                      stock: '',
+                      sort: '',
+                    })
+                  }
+                >
+                  필터 초기화
+                </Button>
+              )
+            }
           >
-            <thead
-              role="rowgroup"
-              className="sr-only lg:not-sr-only lg:table-header-group"
-            >
-              <tr role="row" className="border-y border-gray-300">
-                {COLUMNS.map((column) => (
-                  <th
-                    key={column}
-                    role="columnheader"
-                    scope="col"
-                    className="px-2 py-3 font-medium"
-                  >
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody role="rowgroup" className="grid gap-3 lg:table-row-group">
-              {visible.map((product) => {
-                const cells = [
-                  <div
-                    key="photo"
-                    className="relative size-14 overflow-hidden border border-gray-300"
-                  >
-                    {product.images[0] && (
-                      <Image
-                        src={imageUrl(product.images[0])}
-                        alt=""
-                        unoptimized
-                        fill
-                        sizes="56px"
-                        className="object-cover"
-                      />
-                    )}
-                  </div>,
-                  product.name,
-                  CATEGORY_LABELS[product.category],
-                  product.minPrice === null
-                    ? '—'
-                    : `${krw(product.minPrice)}원${product.variants.length > 1 ? '부터' : ''}`,
-                  `${product.stock}개`,
-                  product.status === 'sold_out' ? '품절' : '판매 중',
-                  product.is_active ? '보임' : '감춤',
-                  <div key="actions" className="space-y-2">
-                    <Link
-                      href={`/admin/products/${product.id}/edit`}
-                      className="underline"
-                    >
-                      수정하기
-                    </Link>
-                    <DeleteProductButton
-                      id={product.id}
-                      name={product.name}
-                      onDeleted={(refreshFailed) => {
-                        if (refreshFailed) setDeleteRefreshFailed(true)
-                        reload()
-                      }}
+            {list.products.length
+              ? '조건에 맞는 상품이 없습니다.'
+              : '등록된 상품이 없습니다.'}
+          </EmptyState>
+        ) : (
+          <Table label="상품 목록" columns={COLUMNS} responsive>
+            {visible.map((product) => {
+              const soldOut =
+                product.stock === 0 || product.status === 'sold_out'
+              const cells = [
+                <div
+                  key="photo"
+                  className="border-line bg-cloud relative size-12 overflow-hidden rounded-sm border"
+                >
+                  {product.images[0] && (
+                    <Image
+                      src={imageUrl(product.images[0])}
+                      alt=""
+                      unoptimized
+                      fill
+                      sizes="48px"
+                      className="object-cover"
                     />
-                  </div>,
-                ]
-                return (
-                  <tr
-                    key={product.id}
-                    role="row"
-                    className="grid grid-cols-2 items-start gap-3 border border-gray-300 p-3 lg:table-row lg:border-x-0 lg:border-t-0"
+                  )}
+                </div>,
+                <div key="name" className="min-w-0">
+                  <p className="font-semibold">{product.name}</p>
+                  <p className="text-ink-muted text-xs">{product.slug}</p>
+                </div>,
+                CATEGORY_LABELS[product.category],
+                product.minPrice === null
+                  ? '—'
+                  : `${krw(product.minPrice)}원${product.variants.length > 1 ? '부터' : ''}`,
+                `${product.stock}개`,
+                <Badge key="stock" tone={soldOut ? 'emphasis' : 'neutral'}>
+                  {soldOut ? '품절' : '판매 중'}
+                </Badge>,
+                <Badge
+                  key="visibility"
+                  tone={product.is_active ? 'neutral' : 'strong'}
+                >
+                  {product.is_active ? '보임' : '감춤'}
+                </Badge>,
+                <div
+                  key="actions"
+                  className="flex flex-wrap items-center gap-1"
+                >
+                  <ButtonLink
+                    href={`/admin/products/${product.id}/edit`}
+                    variant="ghost"
                   >
-                    {cells.map((cell, index) => (
+                    수정
+                  </ButtonLink>
+                  <DeleteProductButton
+                    id={product.id}
+                    name={product.name}
+                    onDeleted={(refreshFailed) => {
+                      setDeleteResult(
+                        refreshFailed ? 'refresh-failed' : 'success'
+                      )
+                      reload()
+                    }}
+                  />
+                </div>,
+              ]
+              return (
+                <tr
+                  key={product.id}
+                  role="row"
+                  className={`border-line grid grid-cols-6 items-start gap-3 rounded-md border p-3 lg:table-row lg:rounded-none lg:border-x-0 lg:border-t-0 lg:last:border-b-0 ${product.is_active ? 'bg-white' : 'bg-cloud'}`}
+                >
+                  {cells.map((cell, index) => {
+                    const column = COLUMNS[index]
+                    const label =
+                      typeof column === 'string' ? column : column.label
+                    return (
                       <td
-                        key={COLUMNS[index]}
+                        key={label}
                         role="cell"
-                        className="min-w-0 wrap-anywhere first:row-span-2 first:self-center first:justify-self-start last:col-span-2 last:border-t last:border-gray-300 last:pt-3 lg:px-2 lg:py-3 lg:align-middle lg:last:border-t-0"
+                        className={`last:border-line col-span-2 min-w-0 wrap-anywhere first:col-span-1 last:col-span-6 last:border-t last:pt-2 lg:px-3 lg:py-2 lg:align-middle lg:last:border-t-0 [&:nth-child(2)]:col-span-5 [&:nth-child(2)]:self-center [&:nth-child(6)]:col-span-3 [&:nth-child(7)]:col-span-3 ${typeof column === 'string' ? '' : numericCell}`}
                       >
                         {index > 1 && index < cells.length - 1 && (
                           <span
                             aria-hidden="true"
-                            className="block text-gray-600 lg:hidden"
+                            className="text-ink-muted block text-xs lg:hidden"
                           >
-                            {COLUMNS[index]}
+                            {label}
                           </span>
                         )}
                         {cell}
                       </td>
-                    ))}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </Table>
         ))}
     </div>
   )
@@ -320,10 +325,12 @@ function ProductList() {
 
 function SaveNotice() {
   const params = useSearchParams()
-  if (params.get('shop-refresh') !== 'failed') return null
+  const refresh = params.get('shop-refresh')
+  if (refresh !== 'failed' && refresh !== 'saved') return null
   return (
-    <p role="status">
-      상품을 저장했습니다. 가게에 반영되기까지 잠시 기다려 주세요.
-    </p>
+    <Notice tone="success">
+      상품을 저장했습니다.
+      {refresh === 'failed' && ' 가게에 반영되기까지 잠시 기다려 주세요.'}
+    </Notice>
   )
 }

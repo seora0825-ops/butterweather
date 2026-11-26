@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { Button, Notice } from './ui'
 import { createClient } from '@/lib/supabase/browser'
 
 const MENU = [
@@ -54,6 +55,7 @@ type Gate =
 export default function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const menuRef = useRef<HTMLElement>(null)
   const [gate, setGate] = useState<Gate>({ state: 'checking' })
   const [signOutFailed, setSignOutFailed] = useState(false)
 
@@ -104,6 +106,20 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
+  useEffect(() => {
+    const menu = menuRef.current
+    const activeLink = menu?.querySelector('[aria-current="page"]')
+    if (!menu || !activeLink || menu.scrollWidth <= menu.clientWidth) return
+
+    const menuBounds = menu.getBoundingClientRect()
+    const linkBounds = activeLink.getBoundingClientRect()
+    if (linkBounds.right > menuBounds.right) {
+      menu.scrollLeft += linkBounds.right - menuBounds.right + 16
+    } else if (linkBounds.left < menuBounds.left) {
+      menu.scrollLeft += linkBounds.left - menuBounds.left - 16
+    }
+  }, [gate.state, pathname])
+
   async function signOut() {
     setSignOutFailed(false)
     // 성공하면 위의 SIGNED_OUT 이 로그인 화면으로 보낸다
@@ -112,37 +128,37 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
   }
 
   if (gate.state === 'checking') {
-    return <p className="px-7 py-20 text-sm">관리자인지 확인하는 중…</p>
+    return (
+      <div className="mx-auto max-w-lg px-4 py-12">
+        <Notice>관리자인지 확인하는 중…</Notice>
+      </div>
+    )
   }
 
   if (gate.state === 'error') {
     return (
-      <p role="alert" className="px-7 py-20 text-sm">
-        관리자인지 확인하지 못했습니다. 새로고침해 주세요.
-      </p>
+      <div className="mx-auto max-w-lg px-4 py-12">
+        <Notice tone="error">
+          관리자인지 확인하지 못했습니다. 새로고침해 주세요.
+        </Notice>
+      </div>
     )
   }
 
   if (gate.state === 'stranger') {
     return (
-      <div className="px-7 py-20 text-sm leading-relaxed">
-        <p role="alert" className="mb-4">
+      <div className="mx-auto max-w-lg space-y-3 px-4 py-12">
+        <Notice tone="error">
           {gate.email
-            ? `${gate.email} 은(는) 관리자 계정이 아닙니다. 로그아웃한 뒤 관리자 구글 계정으로 다시 로그인해 주세요.`
-            : '이 계정에는 이메일이 없어 관리자인지 알 수 없습니다. 로그아웃한 뒤 관리자 구글 계정으로 다시 로그인해 주세요.'}
-        </p>
-        <button
-          type="button"
-          onClick={signOut}
-          className="cursor-pointer underline"
-        >
-          로그아웃
-        </button>
-        {signOutFailed ? (
-          <p role="alert" className="mt-2">
+            ? `${gate.email} 계정에는 관리자 권한이 없습니다. 로그아웃한 뒤 관리자 구글 계정으로 로그인해 주세요.`
+            : '이 계정의 이메일을 확인할 수 없습니다. 로그아웃한 뒤 관리자 구글 계정으로 로그인해 주세요.'}
+        </Notice>
+        <Button onClick={signOut}>로그아웃</Button>
+        {signOutFailed && (
+          <Notice tone="error">
             로그아웃하지 못했습니다. 다시 눌러 주세요.
-          </p>
-        ) : null}
+          </Notice>
+        )}
       </div>
     )
   }
@@ -160,47 +176,55 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[220px_minmax(0,1fr)]">
       <nav
+        ref={menuRef}
         aria-label="관리 메뉴"
-        className="flex min-w-0 items-center gap-5 overflow-x-auto border-b border-gray-200 px-4 py-3 text-sm whitespace-nowrap md:sticky md:top-0 md:h-dvh md:flex-col md:items-stretch md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-r md:border-b-0 md:p-6 md:whitespace-normal"
+        className="border-line flex min-w-0 items-center gap-2 overflow-x-auto border-b bg-white px-4 py-3 text-sm whitespace-nowrap md:sticky md:top-0 md:h-dvh md:flex-col md:items-stretch md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-r md:border-b-0 md:px-4 md:py-7 md:whitespace-normal"
       >
-        <p className="shrink-0 font-semibold">BUTTER WEATHER 관리</p>
+        <p className="shrink-0 px-2 text-sm font-semibold">
+          BUTTER WEATHER 관리
+        </p>
         {MENU.map(({ title, links }) => (
           <div
             key={title}
-            className="flex shrink-0 items-center gap-5 md:flex-col md:items-stretch md:gap-1"
+            className="flex shrink-0 items-center gap-1 md:flex-col md:items-stretch md:gap-1"
           >
-            <p className="hidden font-medium md:block">{title}</p>
+            <p className="text-ink-muted hidden px-3 py-1 text-xs font-medium md:block">
+              {title}
+            </p>
             {links.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
                 aria-current={current === href ? 'page' : undefined}
-                className="py-2 underline-offset-4 hover:underline aria-[current=page]:font-bold md:px-2"
+                className="hover:bg-cloud aria-[current=page]:bg-butter-light flex min-h-11 items-center rounded-md px-3 font-medium aria-[current=page]:font-semibold"
               >
                 {label}
               </Link>
             ))}
           </div>
         ))}
-        <div className="flex shrink-0 items-center gap-5 border-l border-gray-200 pl-5 md:mt-auto md:flex-col md:items-start md:gap-3 md:border-t md:border-l-0 md:pt-4 md:pl-0">
-          <Link href="/" className="underline-offset-4 hover:underline">
+        <div className="border-line flex shrink-0 items-center gap-3 border-l pl-5 md:mt-auto md:flex-col md:items-start md:gap-3 md:border-t md:border-l-0 md:pt-4 md:pl-0">
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+          >
             가게 화면 보기
           </Link>
-          <span className="md:wrap-anywhere">{gate.email}</span>
-          <button
-            type="button"
-            onClick={signOut}
-            className="cursor-pointer py-2 underline"
-          >
+          <span className="text-ink-muted text-xs md:wrap-anywhere">
+            {gate.email}
+          </span>
+          <Button variant="ghost" onClick={signOut}>
             로그아웃
-          </button>
+          </Button>
           {signOutFailed ? (
-            <p role="alert">로그아웃하지 못했습니다. 다시 눌러 주세요.</p>
+            <Notice tone="error">
+              로그아웃하지 못했습니다. 다시 눌러 주세요.
+            </Notice>
           ) : null}
         </div>
       </nav>
       <main
-        className={`mx-auto w-full min-w-0 px-4 py-8 sm:px-7 md:py-10 ${isList ? 'max-w-6xl' : 'max-w-3xl'}`}
+        className={`mx-auto w-full min-w-0 px-4 py-8 sm:px-7 md:py-10 ${isList ? 'max-w-7xl' : 'max-w-3xl'}`}
       >
         {children}
       </main>

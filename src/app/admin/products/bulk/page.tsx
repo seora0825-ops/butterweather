@@ -1,7 +1,15 @@
 'use client'
 
+import {
+  Button,
+  ButtonLink,
+  Checkbox,
+  Notice,
+  PageHeader,
+  Select,
+  TextField,
+} from '@/components/admin/ui'
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { revalidateShop } from '@/app/admin/actions'
 import { compressImage } from '@/lib/compressImage'
 import { nameFor, tonesOf, type Tone } from '@/lib/naming'
@@ -36,8 +44,6 @@ type Draft = {
   slug: string
   reason?: string
 }
-
-const FIELD = 'w-full min-w-0 border border-gray-300 px-3 py-2 text-base'
 
 /** 작게 줄여 색만 본다 */
 async function readTones(file: File): Promise<Tone[]> {
@@ -227,26 +233,27 @@ export default function BulkPage() {
 
   return (
     <div className="flex flex-col gap-6 text-sm">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-semibold">사진으로 한 번에 등록</h1>
-        <Link href="/admin/products" className="underline">
-          상품 목록
-        </Link>
-      </div>
+      <PageHeader
+        title="사진으로 한 번에 등록"
+        actions={<ButtonLink href="/admin/products">상품 목록으로</ButtonLink>}
+      />
       <p>
         사진 한 장이 디자인 하나가 됩니다. 이름은 사진의 색을 보고 지어 드리고,
         등록하기 전에 이름·가격·개수를 고치실 수 있습니다.
       </p>
       {loadFailed ? (
-        <p role="alert">
+        <Notice tone="error">
           이미 쓴 이름을 읽지 못했습니다. 페이지를 새로고침해 주세요.
-        </p>
+        </Notice>
       ) : null}
 
-      <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-4">
-        <label className="flex flex-col gap-1">
+      <fieldset
+        disabled={busy}
+        className="border-line grid gap-4 rounded-md border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <label className="flex min-w-0 flex-col gap-1 font-medium">
           카테고리
-          <select
+          <Select
             value={category}
             disabled={drafts.length > 0}
             onChange={(e) => {
@@ -255,49 +262,44 @@ export default function BulkPage() {
               setCategory(next.id)
               setPrice(String(next.price))
             }}
-            className={FIELD}
           >
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1 font-medium">
           기본 가격 (원)
-          <input
+          <TextField
             type="number"
             inputMode="numeric"
             min={0}
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className={FIELD}
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1 font-medium">
           기본 개수
-          <input
+          <TextField
             type="number"
             inputMode="numeric"
             min={0}
             value={stock}
             onChange={(e) => setStock(e.target.value)}
-            className={FIELD}
           />
         </label>
-        <label className="flex items-center gap-2 sm:mt-6">
-          <input
-            type="checkbox"
+        <label className="flex min-h-11 items-center gap-2 font-medium lg:self-end">
+          <Checkbox
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
-            className="size-5"
           />
           등록하면서 가게에 보이기
         </label>
       </fieldset>
 
-      <label className="flex min-h-24 cursor-pointer items-center justify-center border border-dashed border-gray-300 px-4 text-center has-disabled:cursor-not-allowed has-disabled:opacity-40">
+      <label className="border-ink-muted has-disabled:text-ink-muted flex min-h-24 cursor-pointer items-center justify-center rounded-md border border-dashed bg-white px-4 text-center has-disabled:cursor-not-allowed">
         <input
           type="file"
           accept="image/*"
@@ -312,80 +314,83 @@ export default function BulkPage() {
         {reading ? '사진을 읽는 중입니다.' : '사진 여러 장 고르기'}
       </label>
 
+      {!existing && !loadFailed && (
+        <Notice>상품 이름을 불러오는 중입니다.</Notice>
+      )}
+      {reading && <Notice>사진을 읽는 중입니다.</Notice>}
       <ul className="grid gap-4 sm:grid-cols-2">
         {drafts.map((d) => (
-          <li key={d.id} className="flex gap-3 border border-gray-300 p-3">
+          <li
+            key={d.id}
+            className="border-line flex gap-3 rounded-md border bg-white p-3"
+          >
             {/* 아직 올리지 않은 파일이라 next/image 를 쓸 수 없다 */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={d.preview}
               alt=""
-              className="aspect-tile w-24 shrink-0 self-start object-cover"
+              className="aspect-tile w-16 shrink-0 self-start object-cover lg:w-24"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               {d.state === 'done' ? (
                 <p>{`${d.name} 등록했습니다.`}</p>
               ) : (
                 <>
-                  <label className="flex flex-col gap-1">
+                  <label className="flex min-w-0 flex-col gap-1 font-medium">
                     이름
-                    <input
+                    <TextField
                       value={d.name}
                       disabled={busy}
                       maxLength={LIMITS.name.max}
                       onChange={(e) => patch(d.id, { name: e.target.value })}
-                      className={FIELD}
                     />
                   </label>
-                  <label className="flex flex-col gap-1">
+                  <label className="flex min-w-0 flex-col gap-1 font-medium">
                     가격 (원)
-                    <input
+                    <TextField
                       type="number"
                       inputMode="numeric"
                       min={0}
                       value={d.price}
                       disabled={busy}
                       onChange={(e) => patch(d.id, { price: e.target.value })}
-                      className={FIELD}
                     />
                   </label>
-                  <label className="flex flex-col gap-1">
+                  <label className="flex min-w-0 flex-col gap-1 font-medium">
                     개수
-                    <input
+                    <TextField
                       type="number"
                       inputMode="numeric"
                       min={0}
                       value={d.stock}
                       disabled={busy}
                       onChange={(e) => patch(d.id, { stock: e.target.value })}
-                      className={FIELD}
                     />
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <Button
                       type="button"
                       disabled={busy}
                       onClick={() => rename(d)}
-                      className="border border-gray-300 px-3 py-2 disabled:opacity-40"
                     >
                       이름 다시 짓기
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       disabled={busy}
                       onClick={() =>
                         setDrafts((list) => list.filter((x) => x.id !== d.id))
                       }
-                      className="px-2 py-2 underline disabled:opacity-40"
+                      variant="ghost"
                     >
                       빼기
-                    </button>
+                    </Button>
                   </div>
                   {d.state === 'saving' ? (
-                    <p role="status">등록하는 중입니다.</p>
+                    <Notice>등록하는 중입니다.</Notice>
                   ) : null}
                   {d.reason || problem(d) ? (
-                    <p role="alert">{d.reason ?? problem(d)}</p>
+                    <Notice tone="error">{d.reason ?? problem(d)}</Notice>
                   ) : null}
                 </>
               )}
@@ -395,17 +400,17 @@ export default function BulkPage() {
       </ul>
 
       {drafts.length > 0 ? (
-        <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-gray-300 bg-white py-3">
-          <button
+        <div className="border-line bg-cloud sticky bottom-0 flex flex-wrap items-center gap-3 border-t py-3">
+          <Button
             type="button"
             onClick={saveAll}
             disabled={busy || !ready}
-            className="border border-black px-4 py-3 disabled:opacity-40"
+            variant="primary"
           >
             {busy ? '등록하는 중…' : `${waiting.length}개 등록하기`}
-          </button>
+          </Button>
           {done > 0 ? (
-            <span role="status">{`${done}개 등록했습니다.`}</span>
+            <Notice tone="success">{`${done}개 등록했습니다.`}</Notice>
           ) : null}
         </div>
       ) : null}
