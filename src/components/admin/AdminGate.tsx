@@ -20,6 +20,7 @@ const MENU = [
     links: [
       { href: '/admin/orders', label: '주문' },
       { href: '/admin/counter', label: '현장 계산기' },
+      { href: '/admin/print', label: '칸 카드 인쇄' },
     ],
   },
   { title: '고객', links: [{ href: '/admin/reviews', label: '리뷰' }] },
@@ -171,14 +172,18 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
     '/admin/products',
     '/admin/orders',
     '/admin/reviews',
+    '/admin/print',
   ].includes(pathname)
+  const isPrint = pathname === '/admin/print'
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[220px_minmax(0,1fr)]">
+    <div
+      className={`min-h-dvh md:grid md:grid-cols-[220px_minmax(0,1fr)] ${isPrint ? 'print:block print:min-h-0' : ''}`}
+    >
       <nav
         ref={menuRef}
         aria-label="관리 메뉴"
-        className="border-line flex min-w-0 items-center gap-2 overflow-x-auto border-b bg-white px-4 py-3 text-sm whitespace-nowrap md:sticky md:top-0 md:h-dvh md:flex-col md:items-stretch md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-r md:border-b-0 md:px-4 md:py-7 md:whitespace-normal"
+        className={`border-line flex min-w-0 items-center gap-2 overflow-x-auto border-b bg-white px-4 py-3 text-sm whitespace-nowrap md:sticky md:top-0 md:h-dvh md:flex-col md:items-stretch md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-r md:border-b-0 md:px-4 md:py-7 md:whitespace-normal ${isPrint ? 'print:hidden' : ''}`}
       >
         <p className="shrink-0 px-2 text-sm font-semibold">
           BUTTER WEATHER 관리
@@ -224,7 +229,7 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       <main
-        className={`mx-auto w-full min-w-0 px-4 py-8 sm:px-7 md:py-10 ${isList ? 'max-w-7xl' : 'max-w-3xl'}`}
+        className={`mx-auto w-full min-w-0 px-4 py-8 sm:px-7 md:py-10 ${isList ? 'max-w-7xl' : 'max-w-3xl'} ${isPrint ? 'print:m-0 print:max-w-none print:p-0' : ''}`}
       >
         {children}
       </main>
