@@ -161,7 +161,7 @@ function same(a: string | null, b: string): boolean {
   return timingSafeEqual(Buffer.from(sha256(a)), Buffer.from(sha256(b)))
 }
 
-/** 페이앱이 보낸 통보인가. **셋이 다 맞아야 한다** (userid·연동 KEY·연동 VALUE) */
+/** 페이앱이 보낸 통보인가. userid·연동 KEY·연동 VALUE·hash 가 **다 맞아야 한다** */
 export function isGenuineFeedback(form: URLSearchParams): boolean {
   const { userId, linkKey, linkValue, payKey } = credentials()
 
@@ -171,16 +171,9 @@ export function isGenuineFeedback(form: URLSearchParams): boolean {
     same(form.get('linkval'), linkValue),
   ].every(Boolean)
 
-  // 문서는 hash 도 확인하라고 한다. **아직 막지는 않는다** — 테스트 모드가 없어
-  // 계산법이 맞는지 실제 통보로 본 적이 없고, 틀리면 낸 돈이 확정되지 않는다.
-  // 첫 실제 결제에서 이 log 가 안 나오면 위 조건에 넣는다.
-  // 진짜 통보일 때만 남긴다 — 남의 요청까지 남기면 그 판단을 못 한다
+  // hash 도 맞아야 한다. 계산법은 2026-11-26 실제 결제 통보로 맞는 것을 확인했다
   const expected = sha256(userId + (form.get('responsedate') ?? '') + payKey)
-  if (genuine && form.get('hash')?.toLowerCase() !== expected) {
-    console.error('[payapp] 통보 hash 가 다르다')
-  }
-
-  return genuine
+  return genuine && same(form.get('hash')?.toLowerCase() ?? null, expected)
 }
 
 /** 결제 문서에 적는 이름 */
