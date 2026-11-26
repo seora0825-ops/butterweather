@@ -29,6 +29,8 @@ type Draft = {
   turn: number
   name: string
   price: string
+  /** 같은 디자인으로 만든 개수 */
+  stock: string
   state: 'ready' | 'saving' | 'done' | 'failed'
   /** 실패해서 다시 누를 때 같은 slug 를 쓴다 */
   slug: string
@@ -63,14 +65,17 @@ function newSlug(category: ProductCategory): string {
 }
 
 /**
- * 사진 여러 장을 한 번에 등록한다. **사진 한 장이 상품 하나, 재고 하나다** —
- * 손으로 만들어 같은 것이 없다.
+ * 사진 여러 장을 한 번에 등록한다. **사진 한 장이 디자인 하나다.**
+ *
+ * 처음에는 「하나뿐」이라 재고를 1로 박았다. 2026-11-26 홍설아: 디자인마다 다섯
+ * 개쯤 만든다 — 그래서 개수를 받는다. 1이면 상세가 「하나뿐입니다」로 보인다.
  *
  * 하나가 실패해도 나머지는 계속 간다. 실패한 것만 남아 다시 누를 수 있다.
  */
 export default function BulkPage() {
   const [category, setCategory] = useState<ProductCategory>('bracelet')
   const [price, setPrice] = useState('18000')
+  const [stock, setStock] = useState('5')
   const [active, setActive] = useState(false)
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [existing, setExisting] = useState<Set<string> | null>(null)
@@ -121,6 +126,7 @@ export default function BulkPage() {
         turn: 0,
         name,
         price,
+        stock,
         state: 'ready',
         slug: newSlug(category),
       })
@@ -158,6 +164,10 @@ export default function BulkPage() {
     if (d.price === '' || !Number.isInteger(won) || won < 0) {
       return '가격을 확인해 주세요.'
     }
+    const count = Number(d.stock)
+    if (d.stock === '' || !Number.isInteger(count) || count < 0) {
+      return '개수를 확인해 주세요.'
+    }
     return null
   }
   const ready = waiting.length > 0 && waiting.every((d) => problem(d) === null)
@@ -191,7 +201,7 @@ export default function BulkPage() {
               name: '기본',
               name_en: null,
               price_krw: Number(d.price),
-              stock: 1,
+              stock: Number(d.stock),
               position: 0,
             },
           ]
@@ -224,8 +234,8 @@ export default function BulkPage() {
         </Link>
       </div>
       <p>
-        사진 한 장이 상품 하나가 됩니다. 재고는 하나이고, 이름은 사진의 색을
-        보고 지어 드립니다. 등록하기 전에 고치실 수 있습니다.
+        사진 한 장이 디자인 하나가 됩니다. 이름은 사진의 색을 보고 지어 드리고,
+        등록하기 전에 이름·가격·개수를 고치실 수 있습니다.
       </p>
       {loadFailed ? (
         <p role="alert">
@@ -233,7 +243,7 @@ export default function BulkPage() {
         </p>
       ) : null}
 
-      <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-3">
+      <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-4">
         <label className="flex flex-col gap-1">
           카테고리
           <select
@@ -262,6 +272,17 @@ export default function BulkPage() {
             min={0}
             value={price}
             onChange={(e) => setPrice(e.target.value)}
+            className={FIELD}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          기본 개수
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
             className={FIELD}
           />
         </label>
@@ -325,6 +346,18 @@ export default function BulkPage() {
                       value={d.price}
                       disabled={busy}
                       onChange={(e) => patch(d.id, { price: e.target.value })}
+                      className={FIELD}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    개수
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      value={d.stock}
+                      disabled={busy}
+                      onChange={(e) => patch(d.id, { stock: e.target.value })}
                       className={FIELD}
                     />
                   </label>
