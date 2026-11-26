@@ -12,8 +12,12 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ImageField from '@/components/admin/ImageField'
 import { LIMITS, validateProduct } from '@/lib/productLimits'
+import { numberOf, TODAY_TAG, withNumber, withToday } from '@/lib/productTags'
 import {
+  clearOtherTodayProducts,
   createProduct,
+  listProducts,
+  numberConflict,
   updateProduct,
   type ProductInput,
   type VariantInput,
@@ -112,6 +116,11 @@ export default function ProductForm({
     initial?.category ?? 'bracelet'
   )
   const [images, setImages] = useState<string[]>(initial?.images ?? [])
+  const [number, setNumber] = useState(numberOf(initial?.tags) ?? '')
+  const [today, setToday] = useState(
+    initial?.tags?.includes(TODAY_TAG) ?? false
+  )
+  const numberRef = useRef<HTMLInputElement>(null)
   const [isActive, setIsActive] = useState(initial?.is_active ?? false)
   const [status, setStatus] = useState<ProductStatus>(
     initial?.status ?? 'active'
@@ -154,6 +163,15 @@ export default function ProductForm({
     if (savingRef.current || uploadingRef.current) return
     setError(null)
 
+    const no = number === '' ? null : Number(number)
+    if (
+      numberRef.current?.validity.badInput ||
+      (no !== null && (!Number.isInteger(no) || no < 1 || no > 999))
+    ) {
+      setError('번호는 1부터 999까지의 정수로 입력해 주세요.')
+      return
+    }
+
     const values: VariantInput[] = variants.map((variant) => ({
       ...variant,
       price_krw: variant.price_krw === '' ? NaN : variant.price_krw,
@@ -175,28 +193,40 @@ export default function ProductForm({
       return
     }
 
-    const input: ProductInput = {
-      slug: initial?.slug ?? slug.trim(),
-      name: name.trim(),
-      name_en: nameEn.trim() || null,
-      description: description.trim() || null,
-      description_en: initial?.description_en ?? null,
-      category,
-      tags: initial?.tags ?? [],
-      images,
-      detail_images: initial?.detail_images ?? [],
-      status,
-      is_active: isActive,
-    }
-
     savingRef.current = true
     setSaving(true)
+    let id: string
     try {
+      const products = initial || no !== null ? await listProducts() : []
+      const conflict =
+        no === null ? null : numberConflict(products, no, initial?.id)
+      if (conflict) {
+        setError(conflict)
+        savingRef.current = false
+        setSaving(false)
+        return
+      }
+      const current = products.find((product) => product.id === initial?.id)
+      const input: ProductInput = {
+        slug: initial?.slug ?? slug.trim(),
+        name: name.trim(),
+        name_en: nameEn.trim() || null,
+        description: description.trim() || null,
+        description_en: initial?.description_en ?? null,
+        category,
+        tags: withToday(withNumber(current?.tags ?? initial?.tags, no), today),
+        images,
+        detail_images: initial?.detail_images ?? [],
+        status,
+        is_active: isActive,
+      }
+
       if (initial) {
         // syncVariants는 폼을 열 때 읽은 옵션을 기준으로 재고 변경을 확인한다.
         await updateProduct(initial.id, input, values, initial.variants)
+        id = initial.id
       } else {
-        await createProduct(input, values)
+        id = await createProduct(input, values)
       }
     } catch (err) {
       setError(saveError(err))
@@ -205,14 +235,22 @@ export default function ProductForm({
       return
     }
 
+    const params = new URLSearchParams({ 'shop-refresh': 'saved' })
+    if (today) {
+      try {
+        await clearOtherTodayProducts(id)
+      } catch {
+        params.set('today-cleanup', 'failed')
+      }
+    }
+
     // 가게 화면은 60초 주기로 굽는다. 바꾼 즉시 보이도록 깨운다.
-    let destination = '/admin/products?shop-refresh=saved'
     try {
       await revalidateShop()
     } catch {
-      destination = '/admin/products?shop-refresh=failed'
+      params.set('shop-refresh', 'failed')
     }
-    router.push(destination)
+    router.push(`/admin/products?${params}`)
   }
 
   return (
@@ -401,6 +439,39 @@ export default function ProductForm({
             <option value="sold_out">품절</option>
           </Select>
         </Field>
+
+        <fieldset className="flex min-w-0 flex-col gap-3">
+          <legend className="mb-2 text-base font-semibold">진열</legend>
+          <Field
+            id="product-number"
+            label="번호"
+            hint="매대 칸 카드와 같은 번호입니다."
+          >
+            <TextField
+              ref={numberRef}
+              id="product-number"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={999}
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+            />
+          </Field>
+          <div>
+            <label className="flex min-h-11 items-center gap-2 font-medium">
+              <Checkbox
+                checked={today}
+                aria-describedby="product-today-hint"
+                onChange={(e) => setToday(e.target.checked)}
+              />
+              오늘의 날씨로
+            </label>
+            <p id="product-today-hint" className="text-ink-muted mt-1 text-xs">
+              첫 화면 맨 위에 크게 나옵니다. 하나만 고를 수 있습니다.
+            </p>
+          </div>
+        </fieldset>
 
         <div>
           <label className="flex min-h-11 items-center gap-2 font-medium">

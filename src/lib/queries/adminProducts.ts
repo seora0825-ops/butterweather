@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/browser'
+import { numberOf, TODAY_TAG, withToday } from '@/lib/productTags'
 import type { Product, ProductDetail, ProductVariant } from '@/types/product'
 
 /**
@@ -46,6 +47,48 @@ export async function listProducts(): Promise<Product[]> {
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
   return data ?? []
+}
+
+export function numberConflict(
+  products: Product[],
+  no: number,
+  id?: string
+): string | null {
+  const owner = products.find(
+    (product) => product.id !== id && Number(numberOf(product.tags)) === no
+  )
+  return owner
+    ? `${String(no).padStart(2, '0')}번은 ‘${owner.name}’이 쓰고 있습니다.`
+    : null
+}
+
+export async function clearOtherTodayProducts(id: string): Promise<void> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, tags, updated_at')
+    .contains('tags', [TODAY_TAG])
+    .neq('id', id)
+  if (error) throw new Error(error.message)
+
+  const results = await Promise.allSettled(
+    (data ?? []).map(async (product) => {
+      const { data: updated, error } = await supabase
+        .from('products')
+        .update({ tags: withToday(product.tags, false) })
+        .eq('id', product.id)
+        .eq('updated_at', product.updated_at)
+        .select('id')
+      if (error || !updated?.length) {
+        throw new Error(
+          error?.message ?? 'Today tag cleanup did not update a row'
+        )
+      }
+    })
+  )
+  if (results.some((result) => result.status === 'rejected')) {
+    throw new Error('Today tag cleanup failed')
+  }
 }
 
 /** 옵션까지 전부 — 현장 계산기가 쓴다. 감춘 상품도 현장에서는 판다 */
