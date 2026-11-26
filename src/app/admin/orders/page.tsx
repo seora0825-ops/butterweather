@@ -2,6 +2,18 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
+import {
+  Button,
+  EmptyState,
+  FilterBar,
+  Notice,
+  PageHeader,
+  Select,
+  Table,
+  TextField,
+  numericCell,
+} from '@/components/admin/ui'
+import { OrderBadge } from '@/components/admin/ui/OrderBadge'
 import { useListFilters } from '@/components/admin/useListFilters'
 import { hasVariantName, krw, ORDER_STATUS_LABEL } from '@/lib/orders'
 import { formatOrderTime, listOrders } from '@/lib/queries/adminOrders'
@@ -23,7 +35,6 @@ const PERIODS: Record<string, string> = {
 }
 const DAY_MS = 24 * 60 * 60 * 1000
 const SEOUL_OFFSET = 9 * 60 * 60 * 1000
-const FIELD = 'w-full min-w-0 border border-gray-300 px-3 py-2'
 type OrderList = OrderDetail[] | 'loading' | 'error'
 
 function summarize(items: OrderDetail['items']): string {
@@ -37,7 +48,7 @@ function summarize(items: OrderDetail['items']): string {
 
 export default function AdminOrdersPage() {
   return (
-    <Suspense fallback={<p role="status">주문을 불러오는 중입니다.</p>}>
+    <Suspense fallback={<Notice>주문을 불러오는 중입니다.</Notice>}>
       <OrderList />
     </Suspense>
   )
@@ -108,62 +119,63 @@ function OrderList() {
 
   return (
     <div className="space-y-6 text-sm">
-      <h1 className="font-semibold">주문</h1>
+      <PageHeader
+        title="주문"
+        count={Array.isArray(orders) ? `${visibleOrders.length}건` : undefined}
+      />
 
-      <div
-        role="group"
-        aria-label="주문 검색과 기간"
-        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,10rem)]"
+      <FilterBar
+        label="주문 검색과 기간"
+        className="sm:grid-cols-[minmax(0,1fr)_minmax(0,10rem)]"
       >
         <label className="space-y-1">
           <span>주문 검색</span>
-          <input
+          <TextField
             type="search"
             value={search}
             onChange={(event) => setFilters({ q: event.target.value })}
             placeholder="주문번호·받는 분·휴대폰 끝 4자리"
-            className={FIELD}
           />
         </label>
         <label className="space-y-1">
           <span>기간</span>
-          <select
+          <Select
             value={period}
             onChange={(event) => {
               setReferenceTime(Date.now())
               setFilters({ period: event.target.value })
             }}
-            className={FIELD}
           >
             {Object.entries(PERIODS).map(([id, label]) => (
               <option key={id} value={id}>
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-      </div>
+      </FilterBar>
 
-      {orders === 'loading' && <p role="status">주문을 불러오는 중입니다.</p>}
+      {orders === 'loading' && <Notice>주문을 불러오는 중입니다.</Notice>}
       {orders === 'error' && (
-        <div>
-          <p role="alert">주문을 불러오지 못했습니다. 다시 불러와 주세요.</p>
-          <button
+        <div className="space-y-2">
+          <Notice tone="error">
+            주문을 불러오지 못했습니다. 다시 불러와 주세요.
+          </Notice>
+          <Button
             type="button"
-            className="underline"
             onClick={() => {
               setOrders('loading')
               setRevision((value) => value + 1)
             }}
           >
             다시 불러오기
-          </button>
+          </Button>
         </div>
       )}
       {Array.isArray(orders) && (
         <>
           <div className="space-y-2">
-            <p>
+            <p className="text-ink-muted">
               결제 완료·배송 중은 전부, 나머지는 최근 100건입니다. 시각은 한국
               시각입니다.
             </p>
@@ -173,49 +185,96 @@ function OrderList() {
               className="flex flex-wrap gap-2"
             >
               {FILTERS.map((status) => (
-                <button
+                <Button
                   key={status}
                   type="button"
                   aria-pressed={filter === status}
-                  className="border border-gray-300 px-3 py-2 aria-pressed:font-semibold aria-pressed:underline"
+                  className="aria-pressed:border-ink aria-pressed:bg-butter-light tabular-nums aria-pressed:font-semibold"
                   onClick={() => setFilters({ status })}
                 >
                   {status === 'all' ? '전체' : ORDER_STATUS_LABEL[status]} (
                   {counts[status]})
-                </button>
+                </Button>
               ))}
             </div>
           </div>
           {visibleOrders.length === 0 ? (
-            <p>
+            <EmptyState>
               {orders.length === 0
                 ? '주문이 없습니다.'
                 : '조건에 맞는 주문이 없습니다.'}
-            </p>
+            </EmptyState>
           ) : (
-            <ul className="border-t border-gray-300">
+            <Table
+              label="주문 목록"
+              columns={[
+                '주문번호',
+                '상태',
+                '받는 분',
+                '상품',
+                { label: '총액', numeric: true },
+                '주문 시각',
+              ]}
+              responsive
+            >
               {visibleOrders.map((order) => (
-                <li key={order.id} className="border-b border-gray-300">
-                  <Link
-                    href={`/admin/orders/${encodeURIComponent(order.order_no)}`}
-                    className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 py-3 wrap-anywhere hover:bg-gray-100 sm:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1.5fr)_auto_auto] sm:items-baseline"
+                <tr
+                  key={order.id}
+                  role="row"
+                  className="border-line grid grid-cols-2 gap-3 rounded-md border bg-white p-3 wrap-anywhere lg:table-row lg:rounded-none lg:border-x-0 lg:border-t-0 lg:last:border-b-0"
+                >
+                  <td role="cell" className="self-center lg:px-3 lg:py-2">
+                    <Link
+                      href={`/admin/orders/${encodeURIComponent(order.order_no)}`}
+                      className="decoration-line hover:decoration-ink inline-flex min-h-11 items-center font-semibold tabular-nums underline underline-offset-4"
+                    >
+                      {order.order_no}
+                    </Link>
+                  </td>
+                  <td
+                    role="cell"
+                    className="self-center justify-self-end lg:px-3 lg:py-2"
                   >
-                    <span className="font-medium">
-                      {ORDER_STATUS_LABEL[order.status]}
+                    <OrderBadge status={order.status} />
+                  </td>
+                  <td role="cell" className="lg:px-3 lg:py-2">
+                    <span
+                      aria-hidden="true"
+                      className="text-ink-muted block text-xs lg:hidden"
+                    >
+                      받는 분
                     </span>
-                    <span className="tabular-nums">{order.order_no}</span>
-                    <span>{order.shipping_info.name || '받는 분 없음'}</span>
-                    <span>{summarize(order.items)}</span>
-                    <span className="tabular-nums">
-                      {krw(order.total_krw)}원
+                    {order.shipping_info.name || '받는 분 없음'}
+                  </td>
+                  <td role="cell" className="lg:px-3 lg:py-2">
+                    <span
+                      aria-hidden="true"
+                      className="text-ink-muted block text-xs lg:hidden"
+                    >
+                      상품
                     </span>
-                    <time dateTime={order.created_at} className="tabular-nums">
+                    {summarize(order.items)}
+                  </td>
+                  <td role="cell" className={`lg:px-3 lg:py-2 ${numericCell}`}>
+                    <span
+                      aria-hidden="true"
+                      className="text-ink-muted block text-xs lg:hidden"
+                    >
+                      총액
+                    </span>
+                    {krw(order.total_krw)}원
+                  </td>
+                  <td
+                    role="cell"
+                    className="text-ink-muted tabular-nums lg:px-3 lg:py-2"
+                  >
+                    <time dateTime={order.created_at}>
                       {formatOrderTime(order.created_at)}
                     </time>
-                  </Link>
-                </li>
+                  </td>
+                </tr>
               ))}
-            </ul>
+            </Table>
           )}
         </>
       )}

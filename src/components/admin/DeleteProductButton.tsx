@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Notice } from '@/components/admin/ui'
 import { useRef, useState } from 'react'
 import { deleteProduct } from '@/lib/queries/adminProducts'
 import { revalidateShop } from '@/app/admin/actions'
@@ -46,41 +47,37 @@ export default function DeleteProductButton({
 
   if (!confirming) {
     return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="ml-3 underline"
-      >
+      <Button type="button" onClick={() => setConfirming(true)} variant="ghost">
         지우기
-      </button>
+      </Button>
     )
   }
 
   return (
-    <div className="space-y-2 border border-gray-300 p-3">
+    <div className="border-line bg-cloud basis-full space-y-2 rounded-md border p-3 sm:max-w-72">
       <p className="wrap-anywhere">{`「${name}」을 지우면 옵션도 함께 지워지고 되돌릴 수 없습니다. 사진 파일은 저장소에 남습니다.`}</p>
       <p>이미 주문된 상품은 수정 화면에서 가게에 보이기를 꺼 주세요.</p>
-      {error && <p role="alert">{error}</p>}
+      {error && <Notice tone="error">{error}</Notice>}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           type="button"
           disabled={busy}
           onClick={confirmDelete}
-          className="border border-gray-300 px-3 py-2 disabled:opacity-40"
+          variant="danger"
         >
           {busy ? '지우는 중…' : '확정하고 지우기'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           disabled={busy}
           onClick={() => {
             setConfirming(false)
             setError(null)
           }}
-          className="underline disabled:opacity-40"
+          variant="ghost"
         >
           취소하기
-        </button>
+        </Button>
       </div>
     </div>
   )

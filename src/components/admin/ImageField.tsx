@@ -1,5 +1,6 @@
 'use client'
 
+import { AdminIcon, Badge, Button } from '@/components/admin/ui'
 import { useId, useRef, useState } from 'react'
 import Image from 'next/image'
 import { imageUrl } from '@/lib/images'
@@ -148,7 +149,7 @@ export default function ImageField({
         />
         <label
           htmlFor={inputId}
-          className={`flex min-h-24 items-center justify-center border border-dashed border-gray-300 px-4 py-3 text-center peer-focus-visible:outline ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`border-ink-muted flex min-h-24 items-center justify-center rounded-md border border-dashed bg-white px-4 py-3 text-center peer-focus-visible:outline ${locked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         >
           사진 고르기
         </label>
@@ -166,66 +167,75 @@ export default function ImageField({
       {images.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-3">
           {images.map((path, i) => (
-            <div key={`${path}-${i}`} className="w-24">
-              <div className="relative h-24 w-24 overflow-hidden border border-gray-300">
+            <div
+              key={`${path}-${i}`}
+              className="border-line w-32 rounded-md border bg-white p-2"
+            >
+              <div className="bg-cloud relative aspect-square w-full overflow-hidden rounded-sm">
                 <Image
                   src={imageUrl(path)}
                   alt=""
                   unoptimized
                   fill
+                  sizes="112px"
                   className="object-cover"
                 />
               </div>
 
               <div className="mt-1 flex items-center justify-between gap-1">
-                <button
+                <Button
                   type="button"
                   onClick={() => move(i, i - 1)}
                   disabled={disabled || uploading || i === 0}
                   aria-label={`사진 ${i + 1}을 앞으로 옮기기`}
-                  className="disabled:opacity-40"
+                  variant="ghost"
+                  className="w-11 px-0"
                 >
-                  ←
-                </button>
-                {i === 0 ? (
-                  <span>대표</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => move(i, 0)}
-                    disabled={disabled || uploading}
-                    className="underline disabled:opacity-40"
-                  >
-                    대표로 놓기
-                  </button>
-                )}
-                <button
+                  <AdminIcon name="chevron" className="rotate-90" />
+                </Button>
+                <Button
                   type="button"
                   onClick={() => move(i, i + 1)}
                   disabled={disabled || uploading || i === images.length - 1}
                   aria-label={`사진 ${i + 1}을 뒤로 옮기기`}
-                  className="disabled:opacity-40"
+                  variant="ghost"
+                  className="w-11 px-0"
                 >
-                  →
-                </button>
+                  <AdminIcon name="chevron" className="-rotate-90" />
+                </Button>
+              </div>
+              <div className="mb-2 flex min-h-11 items-center justify-center">
+                {i === 0 ? (
+                  <Badge tone="emphasis">대표</Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() => move(i, 0)}
+                    disabled={disabled || uploading}
+                    variant="ghost"
+                  >
+                    대표로 놓기
+                  </Button>
+                )}
               </div>
 
-              <button
+              <Button
                 type="button"
                 onClick={() =>
                   onChange(images.filter((_, index) => index !== i))
                 }
                 disabled={disabled || uploading}
-                className="mt-1 w-full underline disabled:opacity-40"
+                variant="danger"
+                className="w-full"
               >
                 빼기
-              </button>
+              </Button>
             </div>
           ))}
         </div>
       ) : null}
 
-      <div className="mt-2 space-y-1">
+      <div className="text-ink-muted mt-2 space-y-1 text-xs">
         <p>
           첫 장이 대표 사진입니다. 「대표로 놓기」를 누르면 맨 앞으로
           옮겨집니다.

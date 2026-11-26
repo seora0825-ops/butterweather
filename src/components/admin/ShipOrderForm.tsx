@@ -1,3 +1,4 @@
+import { Button, Select, TextField } from '@/components/admin/ui'
 import type { FormEvent } from 'react'
 import { markShipped, type CancelOrderResult } from '@/app/admin/orders/actions'
 import { CARRIERS } from '@/lib/carriers'
@@ -25,16 +26,11 @@ export default function ShipOrderForm({
 
   return (
     <form onSubmit={submit}>
-      <fieldset disabled={busy} className="space-y-3">
-        <legend className="mb-2 font-medium">송장 등록</legend>
-        <label className="flex flex-col gap-1">
+      <fieldset disabled={busy} className="grid min-w-0 gap-3">
+        <legend className="mb-3 text-base font-semibold">송장 등록</legend>
+        <label className="flex min-w-0 flex-col gap-1 font-medium">
           택배사
-          <select
-            name="carrier"
-            required
-            defaultValue=""
-            className="w-full border border-gray-300 px-3 py-2"
-          >
+          <Select name="carrier" required defaultValue="">
             <option value="" disabled>
               택배사를 골라 주세요
             </option>
@@ -43,23 +39,15 @@ export default function ShipOrderForm({
                 {name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1 font-medium">
           송장번호
-          <input
-            name="trackingNo"
-            required
-            inputMode="numeric"
-            className="w-full border border-gray-300 px-3 py-2"
-          />
+          <TextField name="trackingNo" required inputMode="numeric" />
         </label>
-        <button
-          type="submit"
-          className="border border-gray-300 px-3 py-2 disabled:opacity-40"
-        >
-          송장 등록하고 배송 중으로 바꾸기
-        </button>
+        <Button type="submit" variant="primary" className="justify-self-start">
+          {busy ? '등록하는 중…' : '송장 등록하고 배송 시작'}
+        </Button>
       </fieldset>
     </form>
   )

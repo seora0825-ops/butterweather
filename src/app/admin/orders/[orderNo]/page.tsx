@@ -1,13 +1,20 @@
 'use client'
 
+import {
+  Button,
+  ButtonLink,
+  EmptyState,
+  Notice,
+  PageHeader,
+} from '@/components/admin/ui'
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { markDone, type CancelOrderResult } from '@/app/admin/orders/actions'
 import CancelOrderButton from '@/components/admin/CancelOrderButton'
 import ShipOrderForm from '@/components/admin/ShipOrderForm'
+import { OrderBadge } from '@/components/admin/ui/OrderBadge'
 import { findCarrier } from '@/lib/carriers'
-import { hasVariantName, krw, ORDER_STATUS_LABEL } from '@/lib/orders'
+import { hasVariantName, krw } from '@/lib/orders'
 import { formatOrderTime, getOrder } from '@/lib/queries/adminOrders'
 import type { OrderDetail, ShippingInfo } from '@/types/order'
 
@@ -23,6 +30,7 @@ function OrderView({ orderNo }: { orderNo: string }) {
   const [revision, setRevision] = useState(0)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSucceeded, setActionSucceeded] = useState(false)
   const actionInProgress = useRef(false)
 
   useEffect(() => {
@@ -50,10 +58,13 @@ function OrderView({ orderNo }: { orderNo: string }) {
     actionInProgress.current = true
     setBusy(true)
     setActionError(null)
+    setActionSucceeded(false)
     try {
       const result = await action()
-      if (result.ok) reload()
-      else setActionError(result.reason)
+      if (result.ok) {
+        setActionSucceeded(true)
+        reload()
+      } else setActionError(result.reason)
     } catch {
       setActionError(
         '처리 결과를 확인하지 못했습니다. 새로고침해서 주문 상태를 확인해 주세요.'
@@ -66,26 +77,32 @@ function OrderView({ orderNo }: { orderNo: string }) {
 
   return (
     <div className="space-y-6 text-sm wrap-anywhere">
-      <div className="space-y-2">
-        <Link href="/admin/orders" className="underline">
-          주문 목록
-        </Link>
-        <h1 className="font-semibold">주문 {orderNo}</h1>
-      </div>
-      {order === 'loading' && <p role="status">주문을 불러오는 중입니다.</p>}
+      <PageHeader
+        title={`주문 ${orderNo}`}
+        actions={<ButtonLink href="/admin/orders">주문 목록으로</ButtonLink>}
+      />
+      {actionSucceeded && (
+        <Notice tone="success">주문 상태를 변경했습니다.</Notice>
+      )}
+      {order === 'loading' && <Notice>주문을 불러오는 중입니다.</Notice>}
       {order === 'error' && (
         <div>
-          <p role="alert">주문을 불러오지 못했습니다. 다시 불러와 주세요.</p>
-          <button type="button" onClick={reload} className="underline">
+          <Notice tone="error">
+            주문을 불러오지 못했습니다. 다시 불러와 주세요.
+          </Notice>
+          <Button type="button" onClick={reload} variant="ghost">
             다시 불러오기
-          </button>
+          </Button>
         </div>
       )}
-      {order === null && <p>해당 주문이 없습니다.</p>}
+      {order === null && <EmptyState>해당 주문이 없습니다.</EmptyState>}
       {order && typeof order !== 'string' && (
         <>
-          <section className="space-y-1 border-t border-gray-300 pt-3">
-            <h2 className="font-medium">{ORDER_STATUS_LABEL[order.status]}</h2>
+          <section className="border-line space-y-1 rounded-md border bg-white p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold">주문 상태</h2>
+              <OrderBadge status={order.status} />
+            </div>
             <p>
               주문 시각{' '}
               <time dateTime={order.created_at}>
@@ -99,8 +116,8 @@ function OrderView({ orderNo }: { orderNo: string }) {
             )}
           </section>
 
-          <section className="space-y-2 border-t border-gray-300 pt-3">
-            <h2 className="font-medium">상품</h2>
+          <section className="border-line space-y-2 rounded-md border bg-white p-4 sm:p-5">
+            <h2 className="text-base font-semibold">상품</h2>
             {order.items.length ? (
               <ul className="space-y-2">
                 {order.items.map((item) => (
@@ -122,7 +139,7 @@ function OrderView({ orderNo }: { orderNo: string }) {
             ) : (
               <p>상품이 없습니다.</p>
             )}
-            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-t border-gray-300 pt-2 tabular-nums">
+            <dl className="border-line grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 border-t pt-2 tabular-nums">
               <dt>상품 합계</dt>
               <dd className="text-right">{krw(order.items_krw)}원</dd>
               <dt>배송비</dt>
@@ -134,8 +151,8 @@ function OrderView({ orderNo }: { orderNo: string }) {
             </dl>
           </section>
 
-          <section className="space-y-2 border-t border-gray-300 pt-3">
-            <h2 className="font-medium">결제</h2>
+          <section className="border-line space-y-2 rounded-md border bg-white p-4 sm:p-5">
+            <h2 className="text-base font-semibold">결제</h2>
             <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
               <dt>결제사</dt>
               <dd>{order.payment_provider || '기록 없음'}</dd>
@@ -156,8 +173,8 @@ function OrderView({ orderNo }: { orderNo: string }) {
 
           <ShippingAddress info={order.shipping_info} busy={busy} />
 
-          <section className="space-y-2 border-t border-gray-300 pt-3">
-            <h2 className="font-medium">송장</h2>
+          <section className="border-line space-y-2 rounded-md border bg-white p-4 sm:p-5">
+            <h2 className="text-base font-semibold">송장</h2>
             <p>
               {findCarrier(order.carrier)?.name ??
                 (order.carrier || '택배사 미등록')}
@@ -181,14 +198,13 @@ function OrderView({ orderNo }: { orderNo: string }) {
               />
             )}
             {order.status === 'shipped' && (
-              <button
+              <Button
                 type="button"
                 disabled={busy}
-                className="border border-gray-300 px-3 py-2 disabled:opacity-40"
                 onClick={() => runAction(() => markDone(orderNo))}
               >
                 배송 완료로 바꾸기
-              </button>
+              </Button>
             )}
           </section>
 
@@ -201,8 +217,8 @@ function OrderView({ orderNo }: { orderNo: string }) {
               runAction={runAction}
             />
           )}
-          {busy && <p role="status">주문을 처리하는 중입니다.</p>}
-          {actionError && <p role="alert">{actionError}</p>}
+          {busy && <Notice>주문을 처리하는 중입니다.</Notice>}
+          {actionError && <Notice tone="error">{actionError}</Notice>}
         </>
       )}
     </div>
@@ -237,17 +253,17 @@ function ShippingAddress({
   }
 
   return (
-    <section className="space-y-2 border-t border-gray-300 pt-3">
+    <section className="border-line space-y-2 rounded-md border bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-medium">배송지</h2>
-        <button
+        <h2 className="text-base font-semibold">배송지</h2>
+        <Button
           type="button"
           disabled={busy || !(info.name || info.phone || address)}
           onClick={copyAddress}
-          className="px-2 py-2 underline disabled:opacity-40"
+          variant="ghost"
         >
           배송지 복사하기
-        </button>
+        </Button>
       </div>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
         <dt>받는 분</dt>
@@ -259,12 +275,12 @@ function ShippingAddress({
         <dt>배송 메모</dt>
         <dd className="whitespace-pre-wrap">{info.memo || '없음'}</dd>
       </dl>
-      {copyState === 'copied' && <p role="status">배송지를 복사했습니다</p>}
+      {copyState === 'copied' && <Notice>배송지를 복사했습니다</Notice>}
       {copyState === 'error' && (
-        <p role="alert">
+        <Notice tone="error">
           배송지를 복사하지 못했습니다. 화면에서 이름, 휴대폰, 주소를 선택해
           복사해 주세요.
-        </p>
+        </Notice>
       )}
     </section>
   )

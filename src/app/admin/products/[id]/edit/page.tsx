@@ -1,7 +1,7 @@
 'use client'
 
+import { ButtonLink, Notice, PageHeader } from '@/components/admin/ui'
 import { use, useEffect, useState } from 'react'
-import Link from 'next/link'
 import ProductForm from '@/components/admin/ProductForm'
 import { getProduct } from '@/lib/queries/adminProducts'
 import type { ProductDetail } from '@/types/product'
@@ -42,24 +42,30 @@ function EditProduct({ id }: { id: string }) {
 
   if (error)
     return (
-      <div className="space-y-2 text-sm">
-        <p role="alert">{error}</p>
-        <Link href="/admin/products" className="underline">
+      <div className="space-y-6 text-sm">
+        <PageHeader title="상품 수정" />
+        <Notice tone="error">{error}</Notice>
+        <ButtonLink href="/admin/products" variant="ghost">
           상품 목록으로 돌아가기
-        </Link>
+        </ButtonLink>
       </div>
     )
 
-  if (!product)
+  if (!product) {
     return (
-      <p role="status" className="text-sm">
-        상품을 불러오는 중입니다.
-      </p>
+      <div className="space-y-6 text-sm">
+        <PageHeader title="상품 수정" />
+        <Notice>상품을 불러오는 중입니다.</Notice>
+      </div>
     )
+  }
 
   return (
     <div className="flex flex-col gap-6 text-sm">
-      <h1 className="font-semibold wrap-anywhere">{product.name}</h1>
+      <PageHeader
+        title={product.name}
+        actions={<ButtonLink href="/admin/products">상품 목록으로</ButtonLink>}
+      />
       <ProductForm initial={product} />
     </div>
   )
