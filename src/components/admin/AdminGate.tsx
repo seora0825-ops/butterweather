@@ -2,8 +2,27 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/browser'
+
+const MENU = [
+  {
+    title: '상품',
+    links: [
+      { href: '/admin/products', label: '상품 목록' },
+      { href: '/admin/products/bulk', label: '한 번에 등록' },
+      { href: '/admin/products/new', label: '새 상품' },
+    ],
+  },
+  {
+    title: '판매',
+    links: [
+      { href: '/admin/orders', label: '주문' },
+      { href: '/admin/counter', label: '현장 계산기' },
+    ],
+  },
+  { title: '고객', links: [{ href: '/admin/reviews', label: '리뷰' }] },
+]
 
 type Gate =
   | { state: 'checking' }
@@ -34,6 +53,7 @@ type Gate =
  */
 export default function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [gate, setGate] = useState<Gate>({ state: 'checking' })
   const [signOutFailed, setSignOutFailed] = useState(false)
 
@@ -127,30 +147,63 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
     )
   }
 
+  const current = MENU.flatMap(({ links }) => links)
+    .filter(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href
+
+  const isList = [
+    '/admin/products',
+    '/admin/orders',
+    '/admin/reviews',
+  ].includes(pathname)
+
   return (
-    <>
-      <nav className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-gray-200 px-7 py-4 text-sm">
-        <div className="flex items-center gap-6">
-          <Link href="/admin/products">상품</Link>
-          <Link href="/admin/orders">주문</Link>
-          <Link href="/admin/counter">현장 계산기</Link>
-          <Link href="/">가게 화면 보기</Link>
-        </div>
-        <div className="flex items-center gap-6">
-          {signOutFailed ? (
-            <span role="alert">로그아웃하지 못했습니다. 다시 눌러 주세요.</span>
-          ) : null}
-          <span>{gate.email}</span>
+    <div className="min-h-dvh md:grid md:grid-cols-[220px_minmax(0,1fr)]">
+      <nav
+        aria-label="관리 메뉴"
+        className="flex min-w-0 items-center gap-5 overflow-x-auto border-b border-gray-200 px-4 py-3 text-sm whitespace-nowrap md:sticky md:top-0 md:h-dvh md:flex-col md:items-stretch md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-r md:border-b-0 md:p-6 md:whitespace-normal"
+      >
+        <p className="shrink-0 font-semibold">BUTTER WEATHER 관리</p>
+        {MENU.map(({ title, links }) => (
+          <div
+            key={title}
+            className="flex shrink-0 items-center gap-5 md:flex-col md:items-stretch md:gap-1"
+          >
+            <p className="hidden font-medium md:block">{title}</p>
+            {links.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={current === href ? 'page' : undefined}
+                className="py-2 underline-offset-4 hover:underline aria-[current=page]:font-bold md:px-2"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        ))}
+        <div className="flex shrink-0 items-center gap-5 border-l border-gray-200 pl-5 md:mt-auto md:flex-col md:items-start md:gap-3 md:border-t md:border-l-0 md:pt-4 md:pl-0">
+          <Link href="/" className="underline-offset-4 hover:underline">
+            가게 화면 보기
+          </Link>
+          <span className="md:wrap-anywhere">{gate.email}</span>
           <button
             type="button"
             onClick={signOut}
-            className="cursor-pointer underline"
+            className="cursor-pointer py-2 underline"
           >
             로그아웃
           </button>
+          {signOutFailed ? (
+            <p role="alert">로그아웃하지 못했습니다. 다시 눌러 주세요.</p>
+          ) : null}
         </div>
       </nav>
-      <main className="mx-auto max-w-3xl px-7 py-10">{children}</main>
-    </>
+      <main
+        className={`mx-auto w-full min-w-0 px-4 py-8 sm:px-7 md:py-10 ${isList ? 'max-w-6xl' : 'max-w-3xl'}`}
+      >
+        {children}
+      </main>
+    </div>
   )
 }
