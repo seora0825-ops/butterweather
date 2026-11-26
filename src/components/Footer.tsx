@@ -7,6 +7,7 @@ import { CATEGORIES } from '@/lib/categories'
  * 사업자 정보 표기와 약관·방침 link 는 법이 요구한다 (lib/business.ts).
  */
 const LINKS = [
+  { label: '소개', href: '/about' },
   ...CATEGORIES.map((c) => ({ label: c.label, href: `/category/${c.id}` })),
   { label: '주문 내역', href: '/orders' },
   { label: 'Instagram', href: 'https://www.instagram.com/butterweather_/' },
