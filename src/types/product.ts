@@ -7,7 +7,7 @@
  */
 
 /** 형태로 나눈다. 소재가 아니다 (foundation.md 8절 1번). */
-export type ProductCategory = 'keyring' | 'bracelet' | 'necklace'
+export type ProductCategory = 'keyring' | 'bracelet' | 'necklace' | 'ring'
 
 /** 판매 상태. **노출 여부(`is_active`)와 다른 축이다.** */
 export type ProductStatus = 'active' | 'sold_out'

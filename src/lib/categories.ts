@@ -16,13 +16,8 @@ export interface Category {
   pattern: string
 }
 
-export const CATEGORIES: Category[] = [
-  {
-    id: 'keyring',
-    label: '키링',
-    board: 'bg-board-orange',
-    pattern: '/illustrations/figma/scribble-purple.svg',
-  },
+/** 형태마다 하나. 화면의 순서이기도 하다 */
+export const ALL_CATEGORIES: (Category & { hidden?: boolean })[] = [
   {
     id: 'bracelet',
     label: '팔찌',
@@ -35,8 +30,25 @@ export const CATEGORIES: Category[] = [
     board: 'bg-board-blue',
     pattern: '/illustrations/figma/berry-orange.svg',
   },
+  {
+    id: 'ring',
+    label: '반지',
+    board: 'bg-board-orange',
+    pattern: '/illustrations/figma/scribble-purple.svg',
+  },
+  {
+    // 지금은 가진 것이 없다(2026-11-26). 생기면 `hidden` 을 지운다
+    id: 'keyring',
+    label: '키링',
+    board: 'bg-board-ink',
+    pattern: '/illustrations/figma/tulip-sky.svg',
+    hidden: true,
+  },
 ]
 
+/** 가게 화면에 보이는 것. 메뉴·첫 화면 타일·Footer 가 이것을 쓴다 */
+export const CATEGORIES: Category[] = ALL_CATEGORIES.filter((c) => !c.hidden)
+
 export function findCategory(id: string): Category | undefined {
-  return CATEGORIES.find((c) => c.id === id)
+  return ALL_CATEGORIES.find((c) => c.id === id)
 }

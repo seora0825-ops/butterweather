@@ -32,6 +32,7 @@ import type {
 
 const CATEGORIES: { value: ProductCategory; label: string }[] = [
   { value: 'keyring', label: '키링' },
+  { value: 'ring', label: '반지' },
   { value: 'bracelet', label: '팔찌' },
   { value: 'necklace', label: '목걸이' },
 ]
@@ -101,7 +102,7 @@ export default function ProductForm({
   const [nameEn, setNameEn] = useState(initial?.name_en ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [category, setCategory] = useState<ProductCategory>(
-    initial?.category ?? 'keyring'
+    initial?.category ?? 'bracelet'
   )
   const [images, setImages] = useState<string[]>(initial?.images ?? [])
   const [isActive, setIsActive] = useState(initial?.is_active ?? false)

@@ -21,6 +21,7 @@ import type { ProductCategory, ProductDetail } from '@/types/product'
 
 const CATEGORIES: { id: ProductCategory; label: string }[] = [
   { id: 'keyring', label: '키링' },
+  { id: 'ring', label: '반지' },
   { id: 'bracelet', label: '팔찌' },
   { id: 'necklace', label: '목걸이' },
 ]

@@ -11,6 +11,7 @@ import type { Product, ProductCategory } from '@/types/product'
 
 const CATEGORY_LABELS: Record<ProductCategory, string> = {
   keyring: '키링',
+  ring: '반지',
   bracelet: '팔찌',
   necklace: '목걸이',
 }
