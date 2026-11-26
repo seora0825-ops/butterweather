@@ -9,6 +9,7 @@ import ProductTile from '@/components/shop/ProductTile'
 import ShippingGuide from '@/components/shop/ShippingGuide'
 import { findCategory } from '@/lib/categories'
 import { imageUrl } from '@/lib/images'
+import { numberOf } from '@/lib/productTags'
 import {
   formatKRW,
   getProductBySlug,
@@ -34,6 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!product) return { title: '찾을 수 없음 — 버터웨더' }
   return {
     title: `${product.name} — 버터웨더`,
+    description: product.description?.split('\n')[0] || undefined,
     openGraph: {
       title: product.name,
       images: product.images[0] ? [imageUrl(product.images[0])] : [],
@@ -46,6 +48,7 @@ export default async function ProductPage({ params }: Props) {
   if (!product) notFound()
 
   const category = findCategory(product.category)
+  const no = numberOf(product.tags)
   const prices = product.variants.map((v) => v.price_krw)
   const min = Math.min(...prices)
   const varied = Math.max(...prices) !== min
@@ -69,6 +72,13 @@ export default async function ProductPage({ params }: Props) {
         </div>
 
         <div className="px-4 pt-6 lg:sticky lg:top-16 lg:max-w-xl lg:px-10 lg:py-12">
+          {/* 매대 칸 카드와 같은 번호. 현장에서 본 번호로 여기서 찾는다 */}
+          {no && (
+            <p className="font-hand mb-2 text-5xl leading-none">
+              <span className="sr-only">번호 </span>
+              {no}
+            </p>
+          )}
           <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-balance lg:text-[2rem]">
             {product.name}
           </h1>
