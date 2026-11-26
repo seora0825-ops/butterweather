@@ -1,0 +1,102 @@
+@page stall-cards {
+  size: A4;
+  margin: 8mm;
+}
+
+.preview {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  overflow-x: auto;
+  padding: 16px;
+  background: var(--color-line);
+}
+
+.sheet {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--card-width));
+  grid-auto-rows: var(--card-height);
+  align-content: start;
+  justify-content: center;
+  gap: 2mm;
+  width: 210mm;
+  height: 297mm;
+  margin-inline: auto;
+  padding: 8mm;
+  background: white;
+}
+
+.bracelet {
+  --columns: 1;
+  --card-width: 110mm;
+  --card-height: 131mm;
+  --card-padding: 8mm;
+  --number-size: 28mm;
+  --name-size: 8mm;
+  --price-size: 5mm;
+}
+
+.label {
+  --columns: 2;
+  --card-width: 90mm;
+  --card-height: 50mm;
+  --card-padding: 4mm;
+  --number-size: 16mm;
+  --name-size: 5mm;
+  --price-size: 3.5mm;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--card-padding);
+  border: 0.3mm solid var(--color-ink-muted);
+  background: white;
+  color: var(--color-ink);
+  break-inside: avoid;
+}
+
+.number {
+  font-size: var(--number-size);
+  line-height: 1;
+}
+
+.name {
+  font-size: var(--name-size);
+  line-height: 1.1;
+}
+
+.price {
+  margin-top: 1mm;
+  font-size: var(--price-size);
+  line-height: 1.2;
+}
+
+@media print {
+  :global(body):has(.preview) {
+    min-height: 0;
+    background: white;
+  }
+
+  .preview {
+    display: block;
+    margin: 0;
+    overflow: visible;
+    padding: 0;
+    background: white;
+    page: stall-cards;
+  }
+
+  .sheet {
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    break-inside: avoid;
+  }
+
+  .sheet + .sheet {
+    break-before: page;
+  }
+}
