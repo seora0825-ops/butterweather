@@ -60,7 +60,8 @@ const EMPTY_VARIANT: VariantDraft = {
 }
 
 /** 손으로 만들어 같은 것이 없다. 새 상품은 **하나뿐인 것**으로 시작한다 */
-const ONE_OF_A_KIND: VariantDraft = { ...EMPTY_VARIANT, name: '기본', stock: 1 }
+// 디자인마다 다섯 개쯤 만든다(2026-11-26). 한 점뿐이면 1로 고친다
+const ONE_OF_A_KIND: VariantDraft = { ...EMPTY_VARIANT, name: '기본', stock: 5 }
 
 function Field({
   id,
