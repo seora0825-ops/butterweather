@@ -12,7 +12,7 @@ import { persist } from 'zustand/middleware'
  *
  * 온라인 주문(`orders`)에 섞지 않는다 — 그 표는 회원과 배송지를 요구한다.
  *
- * ⚠️ **재고를 깎지 않는다.** 가져가는 수량을 온라인에서 먼저 빼 두는 전제다.
+ * **재고는 DB 가 깎는다**(`0013`). 판매가 저장되면 줄고, 지우면 되돌아온다.
  */
 
 export type CounterLine = {

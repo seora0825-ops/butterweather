@@ -115,6 +115,13 @@ function Picker() {
   const [catalog, setCatalog] = useState<Catalog>({ state: 'loading' })
   const [revision, setRevision] = useState(0)
   const [amount, setAmount] = useState('')
+  // 보내고 나면 재고가 줄어 있다. 그때 다시 읽는다
+  const outbox = useCounter((s) => s.outbox)
+  const justSold = new Set(
+    outbox
+      .filter((s) => s.status === 'done')
+      .flatMap((s) => s.lines.map((l) => l.key))
+  )
 
   useEffect(() => {
     let alive = true
@@ -125,7 +132,7 @@ function Picker() {
     return () => {
       alive = false
     }
-  }, [revision])
+  }, [revision, outbox])
 
   const won = Number(amount)
   const validAmount = Number.isInteger(won) && won > 0
@@ -173,9 +180,12 @@ function Picker() {
                             onClick={() =>
                               add({ key: v.id, name, priceKrw: v.price_krw })
                             }
-                            // 하나뿐인 것을 두 번 담지 않는다
+                            // 판 것과, 하나뿐인데 이미 담은 것은 잠근다
                             disabled={
-                              v.stock <= 1 && lines.some((l) => l.key === v.id)
+                              v.stock <= 0 ||
+                              (v.stock === 1 &&
+                                (justSold.has(v.id) ||
+                                  lines.some((l) => l.key === v.id)))
                             }
                             className={`${BUTTON} flex h-full w-full flex-col justify-between gap-2 text-left`}
                           >
@@ -192,7 +202,10 @@ function Picker() {
                             ) : null}
                             <span className="wrap-anywhere">{name}</span>
                             <span className="tabular-nums">
-                              {formatKRW(v.price_krw)}
+                              {v.stock <= 0 ||
+                              (v.stock === 1 && justSold.has(v.id))
+                                ? '팔렸습니다'
+                                : formatKRW(v.price_krw)}
                             </span>
                           </button>
                         </li>

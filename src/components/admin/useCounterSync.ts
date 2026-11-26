@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { revalidateShop } from '@/app/admin/actions'
 import { saveSales } from '@/lib/queries/counterSales'
 import { useCounter } from '@/lib/store/counter'
 
@@ -23,6 +24,10 @@ export function useCounterSync(): { waiting: number; failed: boolean } {
     try {
       await saveSales(batch)
       useCounter.getState().sent(batch)
+      // 팔았거나 되돌렸으면 재고가 바뀌었다(`0013`). 가게 화면을 다시 굽는다
+      if (batch.some((s) => s.status === 'done' || s.status === 'voided')) {
+        void revalidateShop().catch(() => {})
+      }
       setFailed(false)
     } catch {
       setFailed(true)
