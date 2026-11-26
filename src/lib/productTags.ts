@@ -7,6 +7,25 @@
  */
 export const TODAY_TAG = 'today'
 
+export function withNumber(
+  tags: string[] | null | undefined,
+  no: number | null
+): string[] {
+  if (no !== null && (!Number.isInteger(no) || no < 1 || no > 999)) {
+    throw new RangeError('Product number must be an integer from 1 to 999')
+  }
+  const rest = (tags ?? []).filter((tag) => !tag.startsWith('no-'))
+  return no === null ? rest : [...rest, `no-${String(no).padStart(2, '0')}`]
+}
+
+export function withToday(
+  tags: string[] | null | undefined,
+  on: boolean
+): string[] {
+  const rest = (tags ?? []).filter((tag) => tag !== TODAY_TAG)
+  return on ? [...rest, TODAY_TAG] : rest
+}
+
 export function numberOf(tags: string[] | null | undefined): string | null {
   for (const tag of tags ?? []) {
     const m = /^no-(\d{1,3})$/.exec(tag)

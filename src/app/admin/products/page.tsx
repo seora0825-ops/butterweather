@@ -19,6 +19,7 @@ import {
 } from '@/components/admin/ui'
 import { useListFilters } from '@/components/admin/useListFilters'
 import { imageUrl } from '@/lib/images'
+import { numberOf, TODAY_TAG } from '@/lib/productTags'
 import { listProductDetails } from '@/lib/queries/adminProducts'
 import type { ProductCategory, ProductDetail } from '@/types/product'
 
@@ -228,6 +229,7 @@ function ProductList() {
         ) : (
           <Table label="상품 목록" columns={COLUMNS} responsive>
             {visible.map((product) => {
+              const number = numberOf(product.tags)
               const soldOut =
                 product.stock === 0 || product.status === 'sold_out'
               const cells = [
@@ -248,7 +250,13 @@ function ProductList() {
                 </div>,
                 <div key="name" className="min-w-0">
                   <p className="font-semibold">{product.name}</p>
-                  <p className="text-ink-muted text-xs">{product.slug}</p>
+                  <div className="text-ink-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                    <span>{product.slug}</span>
+                    {number && <span>No.{number}</span>}
+                    {product.tags?.includes(TODAY_TAG) && (
+                      <Badge>오늘의 날씨</Badge>
+                    )}
+                  </div>
                 </div>,
                 CATEGORY_LABELS[product.category],
                 product.minPrice === null
@@ -328,9 +336,17 @@ function SaveNotice() {
   const refresh = params.get('shop-refresh')
   if (refresh !== 'failed' && refresh !== 'saved') return null
   return (
-    <Notice tone="success">
-      상품을 저장했습니다.
-      {refresh === 'failed' && ' 가게에 반영되기까지 잠시 기다려 주세요.'}
-    </Notice>
+    <>
+      <Notice tone="success">
+        상품을 저장했습니다.
+        {refresh === 'failed' && ' 가게에 반영되기까지 잠시 기다려 주세요.'}
+      </Notice>
+      {params.get('today-cleanup') === 'failed' && (
+        <Notice tone="error">
+          다른 상품의 ‘오늘의 날씨’ 표시를 모두 지우지 못했습니다. 오늘의 날씨로
+          고른 상품을 다시 저장해 주세요.
+        </Notice>
+      )}
+    </>
   )
 }

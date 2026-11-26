@@ -14,9 +14,11 @@ import { revalidateShop } from '@/app/admin/actions'
 import { compressImage } from '@/lib/compressImage'
 import { nameFor, tonesOf, type Tone } from '@/lib/naming'
 import { LIMITS } from '@/lib/productLimits'
+import { withNumber } from '@/lib/productTags'
 import {
   createProduct,
   listProducts,
+  numberConflict,
   uploadProductImages,
 } from '@/lib/queries/adminProducts'
 import type { ProductCategory } from '@/types/product'
@@ -39,6 +41,8 @@ type Draft = {
   price: string
   /** 같은 디자인으로 만든 개수 */
   stock: string
+  number: string
+  numberBadInput?: boolean
   state: 'ready' | 'saving' | 'done' | 'failed'
   /** 실패해서 다시 누를 때 같은 slug 를 쓴다 */
   slug: string
@@ -86,6 +90,7 @@ export default function BulkPage() {
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [existing, setExisting] = useState<Set<string> | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [numberCheckFailed, setNumberCheckFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
   const previews = useRef<string[]>([])
@@ -133,6 +138,7 @@ export default function BulkPage() {
         name,
         price,
         stock,
+        number: '',
         state: 'ready',
         slug: newSlug(category),
       })
@@ -174,6 +180,21 @@ export default function BulkPage() {
     if (d.stock === '' || !Number.isInteger(count) || count < 0) {
       return '개수를 확인해 주세요.'
     }
+    const no = d.number === '' ? null : Number(d.number)
+    if (
+      d.numberBadInput ||
+      (no !== null && (!Number.isInteger(no) || no < 1 || no > 999))
+    ) {
+      return '번호는 1부터 999까지의 정수로 입력해 주세요.'
+    }
+    if (no !== null) {
+      const owner = waiting.find(
+        (other) => other.id !== d.id && Number(other.number) === no
+      )
+      if (owner) {
+        return `${String(no).padStart(2, '0')}번은 ‘${owner.name.trim()}’이 쓰고 있습니다.`
+      }
+    }
     return null
   }
   const ready = waiting.length > 0 && waiting.every((d) => problem(d) === null)
@@ -181,8 +202,26 @@ export default function BulkPage() {
   async function saveAll() {
     if (busy || !ready) return
     setBusy(true)
+    setNumberCheckFailed(false)
+    const products = await (
+      waiting.some((draft) => draft.number !== '')
+        ? listProducts()
+        : Promise.resolve([])
+    ).catch(() => null)
+    if (!products) {
+      setNumberCheckFailed(true)
+      setBusy(false)
+      return
+    }
+
     const saved: string[] = []
     for (const d of waiting) {
+      const no = d.number === '' ? null : Number(d.number)
+      const conflict = no === null ? null : numberConflict(products, no)
+      if (conflict) {
+        patch(d.id, { state: 'failed', reason: conflict })
+        continue
+      }
       patch(d.id, { state: 'saving', reason: undefined })
       try {
         const result = await compressImage(d.file)
@@ -196,7 +235,7 @@ export default function BulkPage() {
             description: null,
             description_en: null,
             category,
-            tags: [],
+            tags: withNumber([], no),
             images,
             detail_images: [],
             status: 'active',
@@ -239,7 +278,7 @@ export default function BulkPage() {
       />
       <p>
         사진 한 장이 디자인 하나가 됩니다. 이름은 사진의 색을 보고 지어 드리고,
-        등록하기 전에 이름·가격·개수를 고치실 수 있습니다.
+        등록하기 전에 이름·가격·개수를 고치고 번호를 넣을 수 있습니다.
       </p>
       {loadFailed ? (
         <Notice tone="error">
@@ -367,6 +406,24 @@ export default function BulkPage() {
                       onChange={(e) => patch(d.id, { stock: e.target.value })}
                     />
                   </label>
+                  <label className="flex min-w-0 flex-col gap-1 font-medium">
+                    번호 (선택)
+                    <TextField
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={999}
+                      defaultValue={d.number}
+                      disabled={busy}
+                      onInput={(e) =>
+                        patch(d.id, {
+                          number: e.currentTarget.value,
+                          numberBadInput: e.currentTarget.validity.badInput,
+                          reason: undefined,
+                        })
+                      }
+                    />
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -399,6 +456,11 @@ export default function BulkPage() {
         ))}
       </ul>
 
+      {numberCheckFailed && (
+        <Notice tone="error">
+          기존 상품 번호를 확인하지 못했습니다. 다시 등록하기를 눌러 주세요.
+        </Notice>
+      )}
       {drafts.length > 0 ? (
         <div className="border-line bg-cloud sticky bottom-0 flex flex-wrap items-center gap-3 border-t py-3">
           <Button
