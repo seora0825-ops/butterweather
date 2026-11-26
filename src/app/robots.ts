@@ -10,9 +10,19 @@ import type { MetadataRoute } from 'next'
  */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: {
-      userAgent: '*',
-      disallow: '/',
-    },
+    rules: [
+      { userAgent: '*', disallow: '/' },
+      // 검색은 막아도 링크 미리보기는 연다 — 플리마켓에서 주소를 나눌 때
+      // 카톡·인스타에 사진과 이름이 떠야 한다. 이 봇들은 색인하지 않는다
+      {
+        userAgent: [
+          'kakaotalk-scrap',
+          'facebookexternalhit',
+          'Twitterbot',
+          'Slackbot-LinkExpanding',
+        ],
+        allow: '/',
+      },
+    ],
   }
 }

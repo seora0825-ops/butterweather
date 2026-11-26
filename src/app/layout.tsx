@@ -2,9 +2,21 @@ import type { Metadata } from 'next'
 import { handKr, handLatin } from '@/lib/fonts'
 import './globals.css'
 
+/**
+ * 공유 미리보기의 주소는 **대표 주소(`www`)로 고정한다** — 프리뷰 주소는
+ * Vercel 로그인을 요구해(CLAUDE.md 7절) 카카오가 그림을 못 가져간다.
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.butterweather.com'),
   title: '버터웨더',
   description: '나의 하루에 부드럽게 스며드는 작은 온기',
+  openGraph: {
+    siteName: '버터웨더',
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  // 탭의 작은 아이콘 — Header 로고와 같은 원본 한 장
+  icons: { icon: '/illustrations/motif-tulip-wordmark.svg' },
 }
 
 /**
