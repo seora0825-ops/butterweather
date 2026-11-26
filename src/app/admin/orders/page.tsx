@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useListFilters } from '@/components/admin/useListFilters'
 import { hasVariantName, krw, ORDER_STATUS_LABEL } from '@/lib/orders'
 import { formatOrderTime, listOrders } from '@/lib/queries/adminOrders'
-import type { OrderDetail, OrderStatus } from '@/types/order'
+import type { OrderDetail } from '@/types/order'
 
 const FILTERS = [
   'all',
@@ -14,6 +15,15 @@ const FILTERS = [
   'done',
   'cancelled',
 ] as const
+const PERIODS: Record<string, string> = {
+  all: '전체',
+  '1': '오늘',
+  '7': '7일',
+  '30': '30일',
+}
+const DAY_MS = 24 * 60 * 60 * 1000
+const SEOUL_OFFSET = 9 * 60 * 60 * 1000
+const FIELD = 'w-full min-w-0 border border-gray-300 px-3 py-2'
 type OrderList = OrderDetail[] | 'loading' | 'error'
 
 function summarize(items: OrderDetail['items']): string {
@@ -26,15 +36,29 @@ function summarize(items: OrderDetail['items']): string {
 }
 
 export default function AdminOrdersPage() {
-  const [filter, setFilter] = useState<OrderStatus | 'all'>('paid')
+  return (
+    <Suspense fallback={<p role="status">주문을 불러오는 중입니다.</p>}>
+      <OrderList />
+    </Suspense>
+  )
+}
+
+function OrderList() {
+  const { params, search, setFilters } = useListFilters()
+  const filter =
+    FILTERS.find((status) => status === params.get('status')) ?? 'paid'
   const [orders, setOrders] = useState<OrderList>('loading')
   const [revision, setRevision] = useState(0)
+  const [referenceTime, setReferenceTime] = useState(() => Date.now())
 
   useEffect(() => {
     let alive = true
     listOrders().then(
       (data) => {
-        if (alive) setOrders(data)
+        if (alive) {
+          setReferenceTime(Date.now())
+          setOrders(data)
+        }
       },
       () => {
         if (alive) setOrders('error')
@@ -45,6 +69,29 @@ export default function AdminOrdersPage() {
     }
   }, [revision])
 
+  const query = search.trim().normalize().toLowerCase()
+  const requestedPeriod = params.get('period') ?? 'all'
+  const period = Object.hasOwn(PERIODS, requestedPeriod)
+    ? requestedPeriod
+    : 'all'
+  const days = period === 'all' ? 0 : Number(period)
+  const today =
+    Math.floor((referenceTime + SEOUL_OFFSET) / DAY_MS) * DAY_MS - SEOUL_OFFSET
+  const from = today - (days - 1) * DAY_MS
+  const matchingOrders = Array.isArray(orders)
+    ? orders.filter((order) => {
+        const created = Date.parse(order.created_at)
+        if (days && (created < from || created >= today + DAY_MS)) return false
+        if (!query) return true
+        const { name, phone } = order.shipping_info
+        return (
+          order.order_no.toLowerCase().includes(query) ||
+          name?.normalize().toLowerCase().includes(query) ||
+          (/^\d{4}$/.test(query) && phone?.replace(/\D/g, '').endsWith(query))
+        )
+      })
+    : []
+
   const counts = {
     all: 0,
     pending: 0,
@@ -53,17 +100,50 @@ export default function AdminOrdersPage() {
     done: 0,
     cancelled: 0,
   }
-  if (Array.isArray(orders)) {
-    counts.all = orders.length
-    for (const order of orders) counts[order.status]++
-  }
-  const visibleOrders = Array.isArray(orders)
-    ? orders.filter((order) => filter === 'all' || order.status === filter)
-    : []
+  counts.all = matchingOrders.length
+  for (const order of matchingOrders) counts[order.status]++
+  const visibleOrders = matchingOrders.filter(
+    (order) => filter === 'all' || order.status === filter
+  )
 
   return (
     <div className="space-y-6 text-sm">
       <h1 className="font-semibold">주문</h1>
+
+      <div
+        role="group"
+        aria-label="주문 검색과 기간"
+        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,10rem)]"
+      >
+        <label className="space-y-1">
+          <span>주문 검색</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setFilters({ q: event.target.value })}
+            placeholder="주문번호·받는 분·휴대폰 끝 4자리"
+            className={FIELD}
+          />
+        </label>
+        <label className="space-y-1">
+          <span>기간</span>
+          <select
+            value={period}
+            onChange={(event) => {
+              setReferenceTime(Date.now())
+              setFilters({ period: event.target.value })
+            }}
+            className={FIELD}
+          >
+            {Object.entries(PERIODS).map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {orders === 'loading' && <p role="status">주문을 불러오는 중입니다.</p>}
       {orders === 'error' && (
         <div>
@@ -98,7 +178,7 @@ export default function AdminOrdersPage() {
                   type="button"
                   aria-pressed={filter === status}
                   className="border border-gray-300 px-3 py-2 aria-pressed:font-semibold aria-pressed:underline"
-                  onClick={() => setFilter(status)}
+                  onClick={() => setFilters({ status })}
                 >
                   {status === 'all' ? '전체' : ORDER_STATUS_LABEL[status]} (
                   {counts[status]})
@@ -110,7 +190,7 @@ export default function AdminOrdersPage() {
             <p>
               {orders.length === 0
                 ? '주문이 없습니다.'
-                : '해당 상태의 주문이 없습니다.'}
+                : '조건에 맞는 주문이 없습니다.'}
             </p>
           ) : (
             <ul className="border-t border-gray-300">
