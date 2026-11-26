@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { ORDERING_OPEN } from '@/lib/shopStatus'
 import { cn } from '@/lib/cn'
 import { formatKRW } from '@/lib/queries/products'
 import { useCart, useCartLines } from '@/lib/store/cart'
@@ -18,6 +20,7 @@ const LOW_STOCK = 3
  */
 export default function ProductBuy({ product }: { product: ProductDetail }) {
   const add = useCart((s) => s.add)
+  const router = useRouter()
   const lines = useCartLines()
   const variants = product.variants
   const single = variants.length === 1
@@ -65,6 +68,16 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
     )
     setQuantity(1)
     setAdded(true)
+  }
+
+  /**
+   * 장바구니를 거치지 않고 이 한 줄만 주문한다. **장바구니는 건드리지 않는다** —
+   * 담아 둔 것까지 같이 결제되면 「바로 구매」가 거짓이 된다.
+   */
+  function buyNow() {
+    if (!variant) return showOptions()
+    const qty = Math.max(1, Math.min(quantity, variant.stock))
+    router.push(`/checkout?buy=${variant.id}&qty=${qty}`)
   }
 
   /** 옵션이 화면 밖에 있을 수 있다. 잠긴 button 대신 그리로 데려간다 */
@@ -159,22 +172,38 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={variant ? addToCart : showOptions}
-          disabled={soldOut || full}
-          className={button({
-            tone: variant ? 'primary' : 'outline',
-            size: 'full',
-          })}
-        >
-          {label}
-          {variant && !soldOut && !full && (
-            <span className="ml-2 tabular-nums">
-              {formatKRW(variant.price_krw * quantity)}
-            </span>
-          )}
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={variant ? addToCart : showOptions}
+            disabled={soldOut || full}
+            className={button({ tone: 'outline', size: 'full' })}
+          >
+            {label}
+          </button>
+          {/* 온라인 주문을 열기 전에는 잠근다(lib/shopStatus.ts). 관리자는 주소로 시험한다 */}
+          <button
+            type="button"
+            onClick={buyNow}
+            disabled={soldOut || !ORDERING_OPEN}
+            className={button({
+              tone: variant ? 'primary' : 'outline',
+              size: 'full',
+            })}
+          >
+            바로 구매
+            {variant && !soldOut && ORDERING_OPEN && (
+              <span className="ml-2 tabular-nums">
+                {formatKRW(variant.price_krw * quantity)}
+              </span>
+            )}
+          </button>
+        </div>
+        {!ORDERING_OPEN && !soldOut && (
+          <p className="text-ink-muted pt-2 text-center text-sm">
+            온라인 주문은 준비 중입니다. 매대에서 만나요.
+          </p>
+        )}
       </div>
     </>
   )
