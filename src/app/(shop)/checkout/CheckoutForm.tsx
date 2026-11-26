@@ -10,7 +10,12 @@ import { imageUrl } from '@/lib/images'
 import { hasVariantName } from '@/lib/orders'
 import { formatKRW } from '@/lib/queries/products'
 import { shippingFee } from '@/lib/shipping'
-import { cartTotalKrw, useCart, useCartLines } from '@/lib/store/cart'
+import {
+  cartTotalKrw,
+  useCart,
+  useCartLines,
+  type CartLine,
+} from '@/lib/store/cart'
 import type { ShippingInfo } from '@/types/order'
 import { createOrder } from './actions'
 import { startPayment } from './payapp'
@@ -55,10 +60,15 @@ function Field({
 
 export default function CheckoutForm({
   lastShipping,
+  directLine = null,
 }: {
   lastShipping: ShippingInfo | null
+  /** 바로 구매로 들어온 한 줄. 있으면 장바구니를 보지 않는다 */
+  directLine?: CartLine | null
 }) {
-  const lines = useCartLines()
+  const cartLines = useCartLines()
+  // 바로 구매면 장바구니를 보지 않는다
+  const lines = directLine ? [directLine] : cartLines
   const remove = useCart((s) => s.remove)
 
   // 옛 주문에 빠진 칸이 있을 수 있어 EMPTY 를 바닥에 깐다
@@ -301,7 +311,7 @@ export default function CheckoutForm({
         {error && (
           <div role="alert" className="space-y-3 pb-3">
             <p>{error}</p>
-            {gone.length > 0 && (
+            {!directLine && gone.length > 0 && (
               <button
                 type="button"
                 onClick={() => {
