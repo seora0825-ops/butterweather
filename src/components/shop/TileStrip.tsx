@@ -24,7 +24,7 @@ export default function TileStrip({
   return (
     <nav
       aria-label="카테고리"
-      className="border-ink bg-ink grid grid-cols-1 gap-0.5 border-b-2 sm:grid-cols-2 lg:grid-cols-4"
+      className="border-ink bg-ink grid grid-cols-1 gap-0.5 border-b-2 sm:grid-cols-2 xl:grid-cols-4"
     >
       {CATEGORIES.map((c) => {
         const photo = photos[c.id]
@@ -35,9 +35,9 @@ export default function TileStrip({
             className="group grid grid-cols-2 focus-visible:z-10"
           >
             <span
-              className={`${c.board} sm:aspect-tile flex h-28 items-end p-3 sm:h-auto lg:p-5`}
+              className={`${c.board} sm:aspect-tile flex h-28 items-end p-3 sm:h-auto 2xl:p-5`}
             >
-              <span className="text-3xl leading-none font-extrabold tracking-tight text-white underline-offset-8 group-hover:underline group-hover:decoration-4 lg:text-5xl">
+              <span className="text-3xl leading-none font-extrabold tracking-tight whitespace-nowrap text-white underline-offset-8 group-hover:underline group-hover:decoration-4 xl:text-[28px] 2xl:text-4xl">
                 {c.label}
               </span>
             </span>
@@ -47,7 +47,7 @@ export default function TileStrip({
                 alt=""
                 fill
                 unoptimized={!photo}
-                sizes="(min-width: 1024px) 13vw, (min-width: 640px) 25vw, 50vw"
+                sizes="(min-width: 1280px) 13vw, (min-width: 640px) 25vw, 50vw"
                 className="ease-out-expo object-cover transition-transform duration-500 group-hover:scale-105"
               />
             </span>
