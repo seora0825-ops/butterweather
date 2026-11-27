@@ -8,7 +8,13 @@ import { cn } from '@/lib/cn'
 /**
  * 상세의 사진. **손가락으로 밀면 넘어간다** — 누를 것을 따로 두지 않는다.
  * 넓은 화면에서는 아래 작은 사진을 눌러도 넘어간다.
+ *
+ * 파일 이름이 `wear-` 로 시작하면 **AI 로 만든 착용 장면**이다 (2026-11-27,
+ * Figma Weave). 실제 물건과 색·모양이 조금 다를 수 있어 사진 위에
+ * 「연출 이미지」를 적는다. 첫 장은 늘 실제 사진으로 둔다.
  */
+export const isStaged = (src: string) => /(^|\/)wear-[^/]*$/.test(src)
+
 export default function ProductGallery({
   images,
   alt,
@@ -64,6 +70,11 @@ export default function ProductGallery({
                 sizes="(min-width: 1024px) 58vw, 100vw"
                 className="object-cover"
               />
+              {isStaged(src) && (
+                <span className="bg-ink text-cloud absolute bottom-3 left-3 rounded-full px-3 py-1 text-sm font-bold">
+                  연출 이미지
+                </span>
+              )}
             </div>
           ))}
         </div>
