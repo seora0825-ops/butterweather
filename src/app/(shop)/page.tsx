@@ -50,7 +50,7 @@ export default async function HomePage() {
         />
       )}
       <TileStrip photos={photos} />
-      <ProductWall title="전체" products={products} art={ART} />
+      <ProductWall title="All" products={products} art={ART} />
     </main>
   )
 }
