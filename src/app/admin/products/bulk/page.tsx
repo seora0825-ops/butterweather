@@ -24,11 +24,11 @@ import {
 import type { ProductCategory } from '@/types/product'
 
 const CATEGORIES: { id: ProductCategory; label: string; price: number }[] = [
-  // 값은 임시다. 나래가 정하면 고친다
+  // 기본 가격 (2026-11-27 홍설아 — 팔찌 9,900 기준). 상품마다는 나래가 고친다
   { id: 'keyring', label: '키링', price: 5000 },
-  { id: 'ring', label: '반지', price: 15000 },
-  { id: 'bracelet', label: '팔찌', price: 18000 },
-  { id: 'necklace', label: '목걸이', price: 28000 },
+  { id: 'ring', label: '반지', price: 8900 },
+  { id: 'bracelet', label: '팔찌', price: 9900 },
+  { id: 'necklace', label: '목걸이', price: 15900 },
 ]
 
 type Draft = {
