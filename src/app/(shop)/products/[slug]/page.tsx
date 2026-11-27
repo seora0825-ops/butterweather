@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: Props) {
               id="others"
               className="text-xl font-extrabold tracking-tight md:text-2xl"
             >
-              다른 {category.label}
+              More {category.label}
             </h2>
             <Link
               href={`/category/${category.id}`}

@@ -47,7 +47,7 @@ export default async function CategoryPage({ params }: Props) {
         </div>
       </div>
       <ProductWall
-        title="전체"
+        title="All"
         products={products}
         art={['/illustrations/figma/watering-can-yellow.svg']}
       />

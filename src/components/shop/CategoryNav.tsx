@@ -22,7 +22,7 @@ export default function CategoryNav({
   if (compact && !browsing) return null
 
   const items = [
-    { href: '/', label: '전체' },
+    { href: '/', label: 'All' },
     ...CATEGORIES.map((c) => ({ href: `/category/${c.id}`, label: c.label })),
   ]
 

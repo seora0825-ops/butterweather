@@ -8,6 +8,10 @@ import type { ProductCategory } from '@/types/product'
  * (`public/illustrations/figma/README.md`). 새로 고른 색은 없다.
  * **어느 짝이 어느 카테고리인지는 임시이고, 바꿀 때는 이 표만 고친다.**
  */
+/**
+ * 이름은 영문이다 (2026-11-27 홍설아 — 감도를 위해). writing.md 의 「화면의
+ * 말은 화면의 언어」에서 카테고리 이름만 예외로 둔다. 어드민은 한글 그대로다.
+ */
 export interface Category {
   id: ProductCategory
   label: string
@@ -20,26 +24,26 @@ export interface Category {
 export const ALL_CATEGORIES: (Category & { hidden?: boolean })[] = [
   {
     id: 'bracelet',
-    label: '팔찌',
+    label: 'Bracelet',
     board: 'bg-board-purple',
     pattern: '/illustrations/figma/flower-green.svg',
   },
   {
     id: 'necklace',
-    label: '목걸이',
+    label: 'Necklace',
     board: 'bg-board-blue',
     pattern: '/illustrations/figma/berry-orange.svg',
   },
   {
     id: 'ring',
-    label: '반지',
+    label: 'Ring',
     board: 'bg-board-orange',
     pattern: '/illustrations/figma/scribble-purple.svg',
   },
   {
     // 2026-11-27 다시 판다 — 하나 5,000원, 매대에서는 뚜껑 연 상자에 쌓는다
     id: 'keyring',
-    label: '키링',
+    label: 'Keyring',
     board: 'bg-board-ink',
     pattern: '/illustrations/figma/tulip-sky.svg',
   },
