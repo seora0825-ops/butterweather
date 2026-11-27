@@ -37,12 +37,11 @@ export const ALL_CATEGORIES: (Category & { hidden?: boolean })[] = [
     pattern: '/illustrations/figma/scribble-purple.svg',
   },
   {
-    // 지금은 가진 것이 없다(2026-11-26). 생기면 `hidden` 을 지운다
+    // 2026-11-27 다시 판다 — 하나 5,000원, 매대에서는 뚜껑 연 상자에 쌓는다
     id: 'keyring',
     label: '키링',
     board: 'bg-board-ink',
     pattern: '/illustrations/figma/tulip-sky.svg',
-    hidden: true,
   },
 ]
 
