@@ -89,7 +89,7 @@ export default function ProductBuy({ product }: { product: ProductDetail }) {
   }
 
   const label = soldOut
-    ? '품절'
+    ? 'Sold out'
     : !variant
       ? '옵션 고르기'
       : full

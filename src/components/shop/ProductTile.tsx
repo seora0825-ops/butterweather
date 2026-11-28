@@ -37,7 +37,7 @@ export default function ProductTile({
         )}
         {soldOut && (
           <span className="bg-ink text-cloud absolute top-3 left-3 rounded-full px-3 py-1 text-sm font-bold">
-            품절
+            Sold out
           </span>
         )}
       </span>
