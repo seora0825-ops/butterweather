@@ -6,7 +6,8 @@ import { useSearchParams } from 'next/navigation'
 import SalesLog from '@/components/admin/SalesLog'
 import { useCounterSync } from '@/components/admin/useCounterSync'
 import { imageUrl } from '@/lib/images'
-import { PAYAPP_MIN_KRW, payappUrl, usesPayapp } from '@/lib/payapp'
+import { PAYAPP_MIN_KRW, appLink, payappUrl, usesPayapp } from '@/lib/payapp'
+import { numberOf } from '@/lib/productTags'
 import { listProductDetails } from '@/lib/queries/adminProducts'
 import { saleStatus } from '@/lib/queries/counterSales'
 import { formatKRW } from '@/lib/queries/products'
@@ -81,7 +82,11 @@ export default function CounterPage() {
 
       {pending ? null : <Picker />}
 
-      <section aria-label="합계" className="border-t border-gray-300 pt-6">
+      <section
+        id="cart"
+        aria-label="합계"
+        className="scroll-mt-4 border-t border-gray-300 pt-6"
+      >
         <Lines locked={pending !== null} />
         <div className="mt-4 flex items-baseline justify-between">
           <span>{`합계 ${itemCount(lines)}개`}</span>
@@ -104,6 +109,25 @@ export default function CounterPage() {
         <Methods onStart={() => setConfirmed(null)} />
       )}
 
+      {/* 상품을 고르는 동안 아래에 늘 보인다 — 담겼는지, 얼마인지, 결제로 가는 길 */}
+      {!pending && lines.length > 0 ? (
+        <>
+          <div aria-hidden className="h-24" />
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black bg-white px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+            <a
+              href="#cart"
+              className="flex items-center justify-between gap-3 bg-black px-4 py-4 text-white"
+            >
+              <span className="tabular-nums">{`${itemCount(lines)}개 담음`}</span>
+              <strong className="text-xl tabular-nums">
+                {formatKRW(total)}
+              </strong>
+              <span className="font-bold">결제하기 ↓</span>
+            </a>
+          </div>
+        </>
+      ) : null}
+
       <SalesLog />
       <Settings />
     </div>
@@ -123,6 +147,7 @@ function Picker() {
   for (const sale of outbox.filter((s) => s.status === 'done'))
     for (const l of sale.lines)
       justSold.set(l.key, (justSold.get(l.key) ?? 0) + l.quantity)
+  const inCart = (id: string) => lines.find((l) => l.key === id)?.quantity ?? 0
   // 남은 개수 = 재고 − 막 판 것 − 지금 담은 것
   const left = (id: string, stock: number) =>
     stock -
@@ -184,11 +209,16 @@ function Picker() {
                           <button
                             type="button"
                             onClick={() =>
-                              add({ key: v.id, name, priceKrw: v.price_krw })
+                              add({
+                                key: v.id,
+                                name,
+                                priceKrw: v.price_krw,
+                                code: numberOf(p.tags) ?? undefined,
+                              })
                             }
                             // 남은 것이 없으면 잠근다
                             disabled={left(v.id, v.stock) <= 0}
-                            className={`${BUTTON} flex h-full w-full flex-col justify-between gap-2 text-left`}
+                            className={`${BUTTON} relative flex h-full w-full flex-col justify-between gap-2 text-left ${inCart(v.id) ? 'border-2 border-black' : ''}`}
                           >
                             {p.images[0] ? (
                               <span className="aspect-tile relative block w-full overflow-hidden">
@@ -199,6 +229,11 @@ function Picker() {
                                   sizes="(min-width: 640px) 33vw, 50vw"
                                   className="object-cover"
                                 />
+                              </span>
+                            ) : null}
+                            {inCart(v.id) ? (
+                              <span className="absolute top-2 right-2 z-10 rounded-full bg-black px-2.5 py-1 font-bold text-white tabular-nums">
+                                {`${inCart(v.id)}개 담음`}
                               </span>
                             ) : null}
                             <span className="wrap-anywhere">{name}</span>
@@ -397,16 +432,25 @@ function Pending({ onConfirmed }: { onConfirmed: (krw: number) => void }) {
 
       {payapp ? (
         <a
-          href={payappUrl(
-            pending.method,
-            lines,
-            pending.id,
-            `${window.location.origin}/admin/counter`
+          href={appLink(
+            payappUrl(
+              pending.method,
+              lines,
+              pending.id,
+              `${window.location.origin}/admin/counter`
+            ),
+            navigator.userAgent
           )}
           className={`${BUTTON} text-center`}
         >
           페이앱 열기
         </a>
+      ) : null}
+      {payapp && !/android/i.test(navigator.userAgent) ? (
+        <p className="text-ink-muted">
+          아이폰에서 페이앱 홈페이지가 열리면 이 버튼을 길게 눌러 「PayApp에서
+          열기」를 고르세요. 한 번 고르면 다음부터 앱으로 열립니다.
+        </p>
       ) : null}
 
       {returned === '1' ? (
