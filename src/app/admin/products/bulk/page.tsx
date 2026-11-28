@@ -27,8 +27,8 @@ const CATEGORIES: { id: ProductCategory; label: string; price: number }[] = [
   // 기본 가격 (2026-11-27 홍설아 — 팔찌 9,900 기준). 상품마다는 나래가 고친다
   { id: 'keyring', label: '키링', price: 5000 },
   { id: 'ring', label: '반지', price: 3000 },
-  { id: 'bracelet', label: '팔찌', price: 9900 },
-  { id: 'necklace', label: '목걸이', price: 12900 },
+  { id: 'bracelet', label: '팔찌', price: 12900 },
+  { id: 'necklace', label: '목걸이', price: 15900 },
 ]
 
 type Draft = {
