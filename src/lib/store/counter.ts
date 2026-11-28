@@ -21,6 +21,8 @@ export type CounterLine = {
   name: string
   priceKrw: number
   quantity: number
+  /** 상품 번호(`no-07` 의 07). 페이앱 상품명에 싣는다. 금액만 넣은 줄은 없다 */
+  code?: string
 }
 
 export const METHODS = [
