@@ -118,11 +118,16 @@ function Picker() {
   const [amount, setAmount] = useState('')
   // 보내고 나면 재고가 줄어 있다. 그때 다시 읽는다
   const outbox = useCounter((s) => s.outbox)
-  const justSold = new Set(
-    outbox
-      .filter((s) => s.status === 'done')
-      .flatMap((s) => s.lines.map((l) => l.key))
-  )
+  // 아직 서버에 닿지 않은 판매. 재고에서 미리 빼고 보여 준다
+  const justSold = new Map<string, number>()
+  for (const sale of outbox.filter((s) => s.status === 'done'))
+    for (const l of sale.lines)
+      justSold.set(l.key, (justSold.get(l.key) ?? 0) + l.quantity)
+  // 남은 개수 = 재고 − 막 판 것 − 지금 담은 것
+  const left = (id: string, stock: number) =>
+    stock -
+    (justSold.get(id) ?? 0) -
+    (lines.find((l) => l.key === id)?.quantity ?? 0)
 
   useEffect(() => {
     let alive = true
@@ -181,13 +186,8 @@ function Picker() {
                             onClick={() =>
                               add({ key: v.id, name, priceKrw: v.price_krw })
                             }
-                            // 판 것과, 하나뿐인데 이미 담은 것은 잠근다
-                            disabled={
-                              v.stock <= 0 ||
-                              (v.stock === 1 &&
-                                (justSold.has(v.id) ||
-                                  lines.some((l) => l.key === v.id)))
-                            }
+                            // 남은 것이 없으면 잠근다
+                            disabled={left(v.id, v.stock) <= 0}
                             className={`${BUTTON} flex h-full w-full flex-col justify-between gap-2 text-left`}
                           >
                             {p.images[0] ? (
@@ -202,11 +202,13 @@ function Picker() {
                               </span>
                             ) : null}
                             <span className="wrap-anywhere">{name}</span>
-                            <span className="tabular-nums">
-                              {v.stock <= 0 ||
-                              (v.stock === 1 && justSold.has(v.id))
-                                ? '팔렸습니다'
-                                : formatKRW(v.price_krw)}
+                            <span className="flex justify-between gap-2 tabular-nums">
+                              <span>{formatKRW(v.price_krw)}</span>
+                              <span>
+                                {left(v.id, v.stock) <= 0
+                                  ? '다 팔렸습니다'
+                                  : `${left(v.id, v.stock)}개 남음`}
+                              </span>
                             </span>
                           </button>
                         </li>

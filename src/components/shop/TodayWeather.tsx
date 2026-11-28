@@ -66,7 +66,7 @@ export default function TodayWeather({
           </span>
           <span className="mt-4 block text-xl font-bold tabular-nums">
             {category?.label} ·{' '}
-            {soldOut ? '품절' : formatKRW(product.min_price_krw)}
+            {soldOut ? 'Sold out' : formatKRW(product.min_price_krw)}
           </span>
         </span>
       </Link>
